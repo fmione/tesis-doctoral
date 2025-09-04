@@ -1,0 +1,257 @@
+CREATE GRAPH TYPE HTBDComputationalWorkflowGraphType STRICT {
+
+    // nodes
+    (experimentType: Experiment {run_id INT, start_time DATE, horizon FLOAT, horizon_unit ENUM("h", "m", "s"), OPEN}),
+
+    (objectiveType: Objective {name STRING, description STRING}),
+        
+    (personType: Person {name STRING, OPEN}),
+
+    (feedingConfigType: FeedingConfig {OPTIONAL feeding_start FLOAT, OPTIONAL feeding_start_unit ENUM("h", "m", "s"), OPTIONAL feeding_stop FLOAT, OPTIONAL feeding_stop_unit ENUM("h", "m", "s"), OPTIONAL feeding_frequency FLOAT, OPTIONAL feeding_frequency_unit ENUM("h", "m", "s"), OPTIONAL minimal_feed_volume FLOAT, OPTIONAL minimal_feed_volume_unit STRING, OPTIONAL maximal_feed_volume FLOAT, OPTIONAL maximal_feed_volume_unit STRING, OPTIONAL increment_cumulative_feed_volume FLOAT, OPTIONAL increment_cumulative_feed_volume_unit STRING, OPTIONAL glc_feed_concentration FLOAT, OPTIONAL glc_feed_concentration_unit STRING, OPEN}),
+
+    (inductionConfigType: InductionConfig {OPTIONAL induction_start FLOAT, OPTIONAL induction_start_unit ENUM("h", "m", "s"), OPTIONAL induction_value FLOAT, OPTIONAL induction_unit STRING, OPTIONAL induction_stock_solution FLOAT, OPTIONAL induction_stock_solution_unit STRING, OPEN}),
+
+    (bioreactorType: Bioreactor {exp_id INT, position STRING, OPTIONAL stirring_speed FLOAT, OPTIONAL stirring_speed_unit STRING, OPTIONAL aeration FLOAT, OPTIONAL aeration_type STRING, OPTIONAL aeration_unit STRING}),
+        
+    (strainType: Strain {name STRING, OPTIONAL supplier STRING, OPTIONAL acquisition_date DATE, OPTIONAL doi STRING, OPEN}), 
+
+    (plasmidType: Plasmid {name STRING, OPTIONAL supplier STRING, OPTIONAL acquisition_date DATE}),
+        
+    (workflowNodeType: WorkflowNode {task_id STRING, trigger_rule ENUM("all_success", "one_success", "all_failed", "one_failed", "none_failed", "all_done", "all_skipped", "none_skipped"), status ENUM("Success", "Failed", "Running", "Skipped"), init_time DATE, OPTIONAL end_time DATE}),
+
+    (computationalMethodType: ComputationalMethod {name STRING, OPTIONAL package STRING, OPTIONAL language STRING, OPTIONAL url STRING, OPEN}),
+
+    (computationalEnvironmentType: ComputationalEnvironment {cpu STRING, ram STRING, operating_system STRING, OPTIONAL gpu STRING, OPTIONAL docker_container BOOL, OPTIONAL docker_image STRING, OPTIONAL hpc BOOL, OPTIONAL requirements STRING, OPEN}),
+
+    (feedingSetpointType: FeedingSetpoint {time INT, time_unit ENUM("h", "m", "s"), value FLOAT, value_unit STRING}),
+
+    (measurementType: Measurement {type ENUM("DOT", "OD600", "Biomass", "Acetate", "Glucose", "Volume", "FLUO_RFP"), time INT, time_unit ENUM("h", "m", "s"), value FLOAT, value_unit STRING}),
+    
+    (deviceType: Device {name STRING, model STRING, type STRING, OPTIONAL manufacturer STRING, OPTIONAL driver STRING, OPEN}),
+    
+    (protocolTaskType: ProtocolTask {name STRING, description STRING, OPTIONAL doi STRING, OPTIONAL steps STRING, OPEN}),
+        
+    (modelStateType: ModelState {type ENUM("DOT", "OD600", "Biomass", "Acetate", "Glucose", "Volume", "FLUO_RFP"), time INT, time_unit ENUM("h", "m", "s"), value FLOAT, value_unit STRING}),    
+    
+    (modelParameterType: ModelParameter {name STRING, OPTIONAL unit STRING} & ( {value FLOAT} | {mean FLOAT, variance FLOAT} )),
+
+    (modelType: Model {name STRING, description STRING, OPTIONAL doi STRING, OPEN}), 
+
+    // relationships
+    (:experimentType)
+        -[designedForType: DesignedFor]->
+    (:objectiveType)
+
+    (:experimentType)
+        -[responsibleType: Responsible {rol STRING}]->
+    (:personType)
+
+    (:experimentType)
+        -[hasType: Has]->
+    (:feedingConfigType)
+
+    (:experimentType)
+        -[hasType: Has]->
+    (:inductionConfigType)
+
+    (:experimentType)
+        -[includesType: Includes]->
+    (:bioreactorType)
+
+    (:bioreactorType)
+        -[usesType: Uses]->
+    (:strainType)
+
+    (:bioreactorType)
+        -[usesType: Uses]->
+    (:plasmidType)
+
+    (:experimentType)
+        -[hasComputationalWorkflowType: HasComputationalWorkflow {OPTIONAL iterations INT, OPTIONAL time_bw_samples INT, OPTIONAL time_first_sample INT, OPTIONAL time_to_process_sample INT, OPTIONAL time_bw_check_db INT, OPTIONAL time_start_checking_db INT, OPTIONAL time_unit ENUM("h", "m", "s")}]->
+    (:workflowNodeType)
+
+    (:workflowNodeType)
+        -[dependencyType: Dependency]->
+    (:workflowNodeType)
+
+    (:workflowNodeType)
+        -[executesType: Executes {OPEN}]-> // hyperparameters properties
+    (:computationalMethodType)
+
+    (:workflowNodeType)
+        -[executedInType: ExecutedIn]->
+    (:computationalEnvironmentType)
+
+    (:workflowNodeType)
+        -[calculatesType: Calculates {OPTIONAL iteration INT}]->
+    (:feedingSetpointType)
+
+    (:feedingSetpointType)
+        -[feedsType: Feeds]->
+    (:bioreactorType)
+
+    (:workflowNodeType)
+        -[predictsType: Predicts {OPTIONAL iteration INT}]->
+    (:modelStateType)
+
+    (:modelStateType)
+        -[predictionForType: PredictionFor]->
+    (:bioreactorType)
+
+    (:modelStateType)
+        -[partOfType: PartOf]->
+    (:modelType)
+
+    (:workflowNodeType)
+        -[getsType: Gets {OPTIONAL iteration INT}]->
+    (:measurementType)
+
+    (:measurementType)
+        -[sampleFromType: SampleFrom]->
+    (:bioreactorType)
+
+    (:measurementType)
+        -[takenFromType: TakenFrom]->
+    (:deviceType)
+
+    (:measurementType)
+        -[takenFollowingType: TakenFollowing]->
+    (:protocolTaskType)
+
+    (:workflowNodeType)
+        -[estimatesType: Estimates {OPTIONAL iteration INT}]->
+    (:modelParameterType)
+
+    (:modelParameterType)
+        -[partOfType: PartOf]->
+    (:modelType)
+
+    // constraints keys
+    // unique run_id for experiments
+    FOR (exp: experimentType)
+        EXCLUSIVE MANDATORY SINGLETON exp.run_id,
+        
+    // unique name for objective
+    FOR (o: objectiveType)
+        EXCLUSIVE MANDATORY SINGLETON o.name,
+
+    // unique name for person
+    FOR (p: personType)
+        EXCLUSIVE MANDATORY SINGLETON p.name,
+
+    // unique exp_id for bioreactor
+    FOR (br: bioreactorType)
+        EXCLUSIVE MANDATORY SINGLETON br.exp_id,
+    
+    // unique name for strain
+    FOR (s: strainType)
+        EXCLUSIVE MANDATORY SINGLETON s.name,
+    // unique name for plasmid
+    FOR (pl: plasmidType)
+        EXCLUSIVE MANDATORY SINGLETON pl.name,
+
+    // for an experiment each workflowNode task_id property has to be unique
+    FOR (e: experimentType)
+        EXCLUSIVE MANDATORY SINGLETON wn.task_id WITHIN 
+            (e)-[*]->(wn: workflowNodeType)
+
+    // unique name for computational method
+    FOR (cm: computationalMethodType)
+        EXCLUSIVE MANDATORY SINGLETON cm.name,
+
+    // unique name for protocol
+    FOR (pt: protocolTaskType)
+        EXCLUSIVE MANDATORY SINGLETON pt.name,
+
+    // unique name for device
+    FOR (d: deviceType)
+        EXCLUSIVE MANDATORY SINGLETON d.name,
+
+    // unique name for model
+    FOR (m: modelType)
+        EXCLUSIVE MANDATORY SINGLETON m.name,
+
+    // constraints cardinalities: default * (zero-or-more)
+    // mandatory to set an objective for the experiment
+    FOR (e: experimentType)
+        MANDATORY SINGLETON df WITHIN (e)-[df: designedForType]-> (:objectiveType)
+
+    // mandatory to set at least one responsible
+    FOR (e: experimentType)
+        MANDATORY r WITHIN (e)-[r: responsibleType]->(:personType)
+
+    // experiment has at most one feeding config. Not mandatory
+    FOR (e: experimentType)
+        SINGLETON h WITHIN (e)-[h: hasType]->(:feedingConfigType)
+
+    // experiment has at most one induction config. Not mandatory
+    FOR (e: experimentType)
+        SINGLETON h WITHIN (e)-[h: hasType]->(:inductionConfigType)
+
+    // mandatory experiment includes at least one BR
+    FOR (e: experimentType)
+        MANDATORY i WITHIN (e)-[i: includesType]->(:bioreactorType)
+
+    // mandatory to set a computational workflow relationship for an
+    // experiment
+    FOR (e: experimentType)
+        MANDATORY SINGLETON hcw WITHIN (e)-[hcw: hasComputationalWorkflowType]-> (:workflowNodeType)
+
+    // bioreactor uses at most one strain. Not mandatory
+    FOR (br: bioreactorType)
+        SINGLETON u WITHIN (br)-[u: usesType]->(:strainType)
+
+    // bioreactor uses at most one plasmid. Not mandatory
+    FOR (br: bioreactorType)
+        SINGLETON u WITHIN (br)-[u: usesType]->(:plasmidType)
+
+    // a workflow node executes at most one computational method. Not 
+    // mandatory
+    FOR (wn: workflowNodeType)
+        SINGLETON ex WITHIN (wn)-[ex: executesType]-> (:computationalMethodType)
+
+    // workflow node executed in at most one computational environment.
+    // Not mandatory
+    FOR (wn: workflowNodeType)
+        SINGLETON ei WITHIN (wn)-[ei: executedInType]-> (:computationalEnvironmentType)
+
+    // mandatory to set a BR for each feeding setpoint
+    FOR (fs: feedingSetpointType)
+        MANDATORY SINGLETON fe WITHIN (fs)-[fe: feedsType]-> (:bioreactorType)
+
+    // mandatory to set a BR for each measurement
+    FOR (m: measurement)
+        MANDATORY SINGLETON sf WITHIN (m)-[sf: sampleFromType]-> (:bioreactorType)
+
+    // measurement taken at most with one protocol. Not mandatory
+    FOR (m: measurement)
+        SINGLETON tfo WITHIN (m)-[tfo: takenFollowingType]->(:protocolTaskType)
+
+
+    // measurement taken at most from one device. Not mandatory
+    FOR (m: measurement)
+        SINGLETON tf WITHIN (m)-[tf: takenFromType]->(:deviceType)
+
+    // mandatory to set a BR for each model state prediction
+    FOR (ms: modelStateType)
+        MANDATORY SINGLETON pf WITHIN (ms)-[pf: predictionForType]-> (:bioreactorType)
+
+    // mandatory to set a model for each model state prediction
+    FOR (ms: modelStateType)
+        MANDATORY SINGLETON po WITHIN (ms)-[po: partOfType]-> (:modelType)
+
+    // mandatory to set a model for each model parameter estimation
+    FOR (mp: modelParameterType)
+        MANDATORY SINGLETON po WITHIN (mp)-[po: partOfType]-> (:modelType)
+        
+    // other constraints
+    // first workflow node always has to be "start"
+    FOR (e: experimentType)
+        MANDATORY wn.task_id = "start" WITHIN (e)-[:hasComputationalWorkflowType]->(wn: workflowNodeType)
+
+    // a workflow node allows only one result node type (model 
+    // parameter - model state - feeding setpoint - measurement). Not 
+    // mandatory
+    FOR (wn: workflowNodeType)
+        SINGLETON TYPE(r) WITHIN (wn)-[r]->(n: modelStateType | modelParameterType | feedingSetpointType | measurementType)
+}

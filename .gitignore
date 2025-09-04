@@ -1,0 +1,14 @@
+**/__pycache__/*
+.idea/
+logs/
+plugins/
+neo4j/
+**/.DS_Store
+.vscode
+dags/data/
+dags/results/
+**/VBA_*.json
+**/db_output.json
+**/EMULATOR_*.json
+**/db_emulator*.json
+images/matlab/*
