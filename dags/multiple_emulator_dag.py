@@ -125,22 +125,22 @@ with DAG(
                     query_and_save(run_id, f'../../../results/{run_id}/db/db_output.json')""")]
             )
 
-            # save_neo4j = base_docker_node(
-            #     task_id=f"save_neo4j",
-            #     image="neomodel",
-            #     working_dir="/scripts/neodb",
-            #     command=["python", "-c",  textwrap.dedent("""
-            #         from Node_neo4j import save_neo4j; 
-            #         run_id = '{{ ti.xcom_pull(task_ids='experiment_""" + str(exp) + """.init') }}'
-            #         save_neo4j(run_id, f'../../results/{run_id}/db/db_output.json')""")]
-            # )
+            save_neo4j = base_docker_node(
+                task_id=f"save_neo4j",
+                image="neomodel",
+                working_dir="/scripts/neodb",
+                command=["python", "-c",  textwrap.dedent("""
+                    from Node_neo4j import save_neo4j_2; 
+                    run_id = '{{ ti.xcom_pull(task_ids='experiment_""" + str(exp) + """.init') }}'
+                    save_neo4j_2(run_id, f'../../results/{run_id}/db/db_output.json')""")]
+            )
 
 
-            # last_node >> init >> start_emu >> save_start_time >> create_feeds >> save_feeds >> get_feeds >> run_emu >> save_measurements >> get_measurements >> save_neo4j
-            last_node >> init >> start_emu >> save_start_time >> create_feeds >> save_feeds >> get_feeds >> run_emu >> save_measurements >> get_measurements
+            last_node >> init >> start_emu >> save_start_time >> create_feeds >> save_feeds >> get_feeds >> run_emu >> save_measurements >> get_measurements >> save_neo4j
+            # last_node >> init >> start_emu >> save_start_time >> create_feeds >> save_feeds >> get_feeds >> run_emu >> save_measurements >> get_measurements
             
-            # last_node = save_neo4j
-            last_node = get_measurements
+            last_node = save_neo4j
+            # last_node = get_measurements
 
 
     
