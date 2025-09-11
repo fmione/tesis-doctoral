@@ -5,6 +5,8 @@ from airflow.models import Variable
 from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.task_group import TaskGroup
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.operators.python import BranchPythonOperator
 from airflow import AirflowException
 from docker.types import Mount
 import os
@@ -48,6 +50,34 @@ def base_docker_node(task_id, command, retries=3, retry_delay=dt.timedelta(minut
     )
 
 
+
+def decide_next(**kwargs):
+    """
+    Lee la Variable persistente, incrementa el contador y decide
+    si volver a lanzar el DAG o finalizar.
+    """
+    count = int(Variable.get("exp_counter", default_var="0"))
+    count += 1
+    Variable.set("exp_counter", str(count))
+
+    ti = kwargs['ti']
+    ti.xcom_push(key='run_number', value=count)
+
+    if count < number_of_experiments:
+        return "trigger_self"
+    else:
+        return "end_task"
+
+
+def build_run_id(**kwargs):
+    """
+    Construye un run_id personalizado con el número de ejecución actual.
+    """
+    ti = kwargs['ti']
+    count = ti.xcom_pull(key='run_number', task_ids='branch')
+    return f"auto_run_{count}"
+
+
 with DAG(
         dag_id="MultiEmulator_2.0_DAG",
         description="Kiwi multiexperiment emulator.",
@@ -57,12 +87,12 @@ with DAG(
         is_paused_upon_creation=True
 ) as dag:
     
-    start = EmptyOperator(task_id="start")
-    last_node = start
+    # start = EmptyOperator(task_id="start")
+    # last_node = start
     
-    for exp in range(1, number_of_experiments + 1):
+    # for exp in range(1, number_of_experiments + 1):
 
-        with TaskGroup(group_id=f"experiment_{exp}"):
+    #     with TaskGroup(group_id=f"experiment_{exp}"):
 
             init = base_docker_node(
                 task_id=f"init",
@@ -79,7 +109,7 @@ with DAG(
                 task_id=f"save_start_time",
                 command=["python", "-c", textwrap.dedent("""
                     from database_connector import save_start_time; 
-                    run_id = '{{ ti.xcom_pull(task_ids='experiment_""" + str(exp) + """.init') }}'
+                    run_id = '{{ ti.xcom_pull(task_ids='init') }}'
                     save_start_time(run_id)""")],
             )
 
@@ -87,7 +117,7 @@ with DAG(
                 task_id=f"create_feeds",
                 command=["python", "-c", textwrap.dedent("""
                     from database_connector import create_feed_json; 
-                    run_id = '{{ ti.xcom_pull(task_ids='experiment_""" + str(exp) + """.init') }}'
+                    run_id = '{{ ti.xcom_pull(task_ids='init') }}'
                     create_feed_json(f'../../../results/{run_id}/feed/feed_0.json','EMULATOR_config.json')""")]
             ) 
 
@@ -95,7 +125,7 @@ with DAG(
                 task_id=f"save_feeds",
                 command=["python", "-c", textwrap.dedent("""
                     from database_connector import save_actions; 
-                    run_id = '{{ ti.xcom_pull(task_ids='experiment_""" + str(exp) + """.init') }}'
+                    run_id = '{{ ti.xcom_pull(task_ids='init') }}'
                     save_actions(run_id, f'../../../results/{run_id}/feed/feed_0.json')""")]
             ) 
 
@@ -113,16 +143,8 @@ with DAG(
                 task_id=f"save_measurements",
                 command=["python", "-c", textwrap.dedent("""
                     from database_connector import save_measurements; 
-                    run_id = '{{ ti.xcom_pull(task_ids='experiment_""" + str(exp) + """.init') }}'
+                    run_id = '{{ ti.xcom_pull(task_ids='init') }}'
                     save_measurements(run_id)""")]
-            )
-
-            get_measurements = base_docker_node(
-                task_id=f"get_measurements",
-                command=["python", "-c",  textwrap.dedent("""
-                    from database_connector import query_and_save; 
-                    run_id = '{{ ti.xcom_pull(task_ids='experiment_""" + str(exp) + """.init') }}'
-                    query_and_save(run_id, f'../../../results/{run_id}/db/db_output.json')""")]
             )
 
             save_neo4j = base_docker_node(
@@ -131,15 +153,34 @@ with DAG(
                 working_dir="/scripts/neodb",
                 command=["python", "-c",  textwrap.dedent("""
                     from Node_neo4j import save_neo4j_2; 
-                    run_id = '{{ ti.xcom_pull(task_ids='experiment_""" + str(exp) + """.init') }}'
+                    run_id = '{{ ti.xcom_pull(task_ids='init') }}'
                     save_neo4j_2(run_id, f'../../results/{run_id}/db/db_output.json')""")]
             )
 
+            check_trigger = BranchPythonOperator(
+                task_id="check_trigger",
+                python_callable=decide_next,
+                provide_context=True
+            )
+            
+            trigger_dag = TriggerDagRunOperator(
+                task_id='trigger_self',
+                trigger_dag_id='MultiEmulator_2.0_DAG',
+                wait_for_completion=False,
+                trigger_run_id="{{ 'auto_run_' ~ task_instance.xcom_pull(task_ids='check_trigger', key='run_number') }}"
+            )
 
-            last_node >> init >> start_emu >> save_start_time >> create_feeds >> save_feeds >> get_feeds >> run_emu >> save_measurements >> get_measurements >> save_neo4j
+            end = EmptyOperator(task_id="end_simulation")
+
+
+            init >> start_emu >> save_start_time >> create_feeds >> save_feeds >> get_feeds >> run_emu >> save_measurements >> save_neo4j 
+            save_neo4j >> check_trigger >> [trigger_dag, end]
+
+
+            # last_node >> init >> start_emu >> save_start_time >> create_feeds >> save_feeds >> get_feeds >> run_emu >> save_measurements >> get_measurements >> save_neo4j
             # last_node >> init >> start_emu >> save_start_time >> create_feeds >> save_feeds >> get_feeds >> run_emu >> save_measurements >> get_measurements
             
-            last_node = save_neo4j
+            # last_node = save_neo4j
             # last_node = get_measurements
 
 
