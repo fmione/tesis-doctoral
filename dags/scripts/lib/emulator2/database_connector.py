@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import os
 import sys
-import uuid
+
 
 def get_connection_url():
     host = os.environ.get("MYSQL_HOST")
@@ -23,13 +23,16 @@ local_tz = pytz.timezone('Europe/Amsterdam')
 db = get_connection_url()
 engine = sqlalchemy.create_engine(db, echo=False)
 
+# TODO: get run id from config
+run_id = 623
+
 
 # **********************************************************************************
 #                       MEASUREMENTS functions
 # **********************************************************************************
 
 
-def save_start_time(run_id):
+def save_start_time():
     """
     Saves the start time of the simulation
     """
@@ -46,7 +49,7 @@ def save_start_time(run_id):
     conn.close()
 
 
-def get_measuring_setup_id(conn, variable_type, run_id):
+def get_measuring_setup_id(conn, variable_type):
     """
     Get variable_setup_id from a variable_type parameter
     """
@@ -98,7 +101,7 @@ def send_data_to_ilab(conn, experiment_id, measuring_setup_id, start_time, measu
         conn.execute(sqlalchemy.text(sql_query))
 
 
-def save_measurements(run_id):
+def save_measurements():
     """
     Save all the measurements for all the MBRs. Deletes the current measurements and saves the new ones.
     """
@@ -133,7 +136,7 @@ def save_measurements(run_id):
                 try:
                     measurement_list = mbrs_measurements[exp_id]["measurements_aggregated"][measurement]
                     # get measuring_setup_id once for measurement canonical name
-                    measuring_setup_id = get_measuring_setup_id(conn, measurement, run_id)
+                    measuring_setup_id = get_measuring_setup_id(conn, measurement)
 
                     # delete all values from type of measurement
                     delete_measuring_setup_id_data(conn, exp_id, measuring_setup_id)
@@ -158,23 +161,24 @@ def get_feeds():
         mbrs_measurements = json.load(file) 
         file.close()
 
-    profile_ids = [mbrs_measurements[exp_id]["metadata"]["profile_id"]["0"] for exp_id in mbrs_measurements]
+    # TODO update template profile ids
+    profile_ids = tuple(range(13763, 13786 + 1))
+    # profile_ids = [mbrs_measurements[exp_id]["metadata"]["profile_id"]["0"] for exp_id in mbrs_measurements]
 
     sql_query = f"""SELECT setpoint_id, profile_id, cultivation_age, setpoint_value AS 'Feed_glc_cum_setpoints' 
-                    FROM setpoints WHERE profile_id IN {tuple(profile_ids)} AND variable_type_id=99"""
-
+                    FROM setpoints WHERE profile_id IN {profile_ids} AND variable_type_id=99"""
     new_setpoints = pd.read_sql(sql_query, conn)
     conn.close()
 
     # TODO: check if there are 11 extra data in setpoints into every exp_id (start from 11th value)
-    for idx, exp_id in enumerate(mbrs_measurements):
+    for index, exp_id in enumerate(mbrs_measurements):
 
         setpoints_df = pd.DataFrame.from_dict(mbrs_measurements[exp_id]["setpoints"]).replace(np.nan, None)
         setpoints_df.index = setpoints_df.index.astype("int") 
         setpoints_df.sort_index(inplace=True)
 
         # concatenates first 11 values from other setpoint data with new profile setpoints
-        updated_setpoints_df = pd.concat([setpoints_df[:11], new_setpoints[new_setpoints["profile_id"] == int(profile_ids[idx])][["setpoint_id","cultivation_age","Feed_glc_cum_setpoints"]]], ignore_index=True).replace(np.nan, None)
+        updated_setpoints_df = pd.concat([setpoints_df[:11], new_setpoints[new_setpoints["profile_id"] == profile_ids[index]][["setpoint_id","cultivation_age","Feed_glc_cum_setpoints"]]], ignore_index=True).replace(np.nan, None)
         updated_setpoints_df.index = updated_setpoints_df.index.astype("string")
         mbrs_measurements[exp_id]["setpoints"].update(updated_setpoints_df.to_dict())
     
@@ -189,21 +193,18 @@ def create_feed_json(filename_db, filename_feed):
     """
 
     with open(filename_feed) as json_file:   
-        feed_dict = json.load(json_file)
+        Feed_dict = json.load(json_file)
 
     new_profile = {}
     
-    for i1 in feed_dict:
-        # try catch to avoid extra fields in the json file than exp_ids
-        try:
-            f_pulse_new=np.array(list(feed_dict[str(i1)]['Pulse_profile']['Feed_pulse']))    
-            tf_new=np.array(list(feed_dict[str(i1)]['Pulse_profile']['time_pulse']))*3600                        
-            
-            new_profile[str(i1)] = {}
-            new_profile[str(i1)]['measurement_time']=tf_new.astype(int).tolist()
-            new_profile[str(i1)]['setpoint_value']=np.cumsum(f_pulse_new).tolist()
-        except:
-            pass
+    for i1 in range(19419, 19443):
+                
+        f_pulse_new=np.array(list(Feed_dict[str(i1)]['Pulse_profile']['Feed_pulse']))    
+        tf_new=np.array(list(Feed_dict[str(i1)]['Pulse_profile']['time_pulse']))*3600                        
+        
+        new_profile[str(i1)] = {}
+        new_profile[str(i1)]['measurement_time']=tf_new.astype(int).tolist()
+        new_profile[str(i1)]['setpoint_value']=np.cumsum(f_pulse_new).tolist()
         
     if not os.path.isdir(os.path.dirname(filename_db)):
         os.makedirs(os.path.dirname(filename_db))
@@ -217,14 +218,14 @@ def create_feed_json(filename_db, filename_feed):
 #          GET measurements, metadata, setpoints FROM query and save file
 # **********************************************************************************
 
-def get_metadata(run_id):
+def get_metadata(runID, engine):
     """
-    Get metadata for a run_id from the database
+    Get metadata for a runID from the database
     """
 
     # TODO: just start_time by now
     sql_metadata = f""" 
-        SELECT start_time FROM runs WHERE run_id = '{run_id}' 
+        SELECT start_time FROM runs WHERE run_id = '{runID}' 
     """
     conn = engine.connect()
     res = conn.execute(sqlalchemy.text(sql_metadata))
@@ -232,9 +233,9 @@ def get_metadata(run_id):
     return pd.DataFrame(res)
 
 
-def get_measurements(run_id):
+def get_measurements(runID, engine):
     """
-    Get all the measurements for a run_id from the database. Grouped by (exp_id, measurement)
+    Get all the measurements for a runID from the database. Grouped by (exp_id, measurement)
     """
     
     sql_measurements = f"""
@@ -245,7 +246,7 @@ def get_measurements(run_id):
         INNER JOIN measurements_experiments m_exp ON m_exp.experiment_id = exp.experiment_id
         INNER JOIN measuring_setup m_set ON m_exp.measuring_setup_id = m_set.measuring_setup_id
         INNER JOIN variable_types vt ON vt.variable_type_id = m_set.variable_type_id
-        WHERE runs.run_id = {run_id}
+        WHERE runs.run_id = {runID}
     """
     conn = engine.connect()
     res = conn.execute(sqlalchemy.text(sql_measurements))
@@ -255,9 +256,9 @@ def get_measurements(run_id):
     return res_df.groupby(["experiment_id", "canonical_name"]) if res_df.shape[0] else res_df
 
 
-def get_setpoints(run_id):
+def get_setpoints(runID, engine):
     """
-    Get all the setpoints for a run_id from the database. Grouped by (exp_id, setpoints)
+    Get all the setpoints for a runID from the database. Grouped by (exp_id, setpoints)
     """
 
     sql_setpoints = f"""
@@ -267,7 +268,7 @@ def get_setpoints(run_id):
         INNER JOIN experiments exp ON bio.bioreactor_id = exp.bioreactor_id
         INNER JOIN setpoints sp ON sp.profile_id = exp.profile_id
         INNER JOIN variable_types vt ON vt.variable_type_id = sp.variable_type_id
-        WHERE runs.run_id = {run_id}
+        WHERE runs.run_id = {runID}
     """
     conn = engine.connect()
     res = conn.execute(sqlalchemy.text(sql_setpoints))
@@ -277,23 +278,27 @@ def get_setpoints(run_id):
     return res_df.groupby(["experiment_id", "canonical_name"]) if res_df.shape[0] else res_df
 
 
-def read_run(run_id):
+def read_run(runID):
     """
-    creates a json file with metadata, setpoints and measurements for an specific run_id
+    creates a json file with metadata, setpoints and measurements for an specific runID
     """
+
+    # connect to database
+    db = get_connection_url()
+    engine = sqlalchemy.create_engine(db, echo=False)
     
     # initial data
     json_data = {}
     
     # get metadata
-    metadata_df = get_metadata(run_id)
+    metadata_df = get_metadata(runID, engine)
     # metadata_df["start_time"]
 
     # get setpoints
-    setpoints_groups_df = get_setpoints(run_id)
+    setpoints_groups_df = get_setpoints(runID, engine)
      
     # get measurements
-    measurements_groups_df = get_measurements(run_id)
+    measurements_groups_df = get_measurements(runID, engine)
 
     # iterate setpoints groups
     for (exp_id, variable), group in setpoints_groups_df:
@@ -325,14 +330,14 @@ def read_run(run_id):
     return json_data
 
 
-def query_and_save(run_id, filepath):
+def query_and_save(runID, filepath):
     """
-    Get all the information from a run_id
+    Get all the information from a runID
     """
 
     rootdir = os.getcwd()
 
-    db_json = read_run(run_id)
+    db_json = read_run(runID)
 
 
     # save JSON file for historical monitoring
@@ -347,38 +352,38 @@ def query_and_save(run_id, filepath):
 # **********************************************************************************
 
 
-def get_profile_ids(connection, run_id):
+def run2ids(connection, runID):
     """
-    Returns the profile ids and name for a given run_id
+    Returns the profile ids and name for a given runID
 
     Parameters
     ----------
     connection: sqlalchemy.engine.Connection
         Connection to mysql db using sqlalchemy.
-    run_id: int
+    runID: int
         Identification number for a experiment.
     """
     query = sqlalchemy.text(f"SELECT profiles.profile_id, profiles.profile_name, experiments.experiment_id "
                             f"FROM profiles "
                             f"INNER JOIN experiments ON profiles.profile_id=experiments.profile_id "
-                            f"WHERE run_id = {run_id};"
+                            f"WHERE run_id = {runID};"
                             )
 
     return pd.read_sql(query, connection)
 
 
-def delete_setpoints(connection, run_id, exp_id, from_time = 0, type_id = 99):
+def delete_setpoints(connection, runID, exp_id, from_time = 0, type_id = 99):
     """
-    Deletes setpoints from a given run_id and bioreactor, from a given time on.
+    Deletes setpoints from a given runID and bioreactor, from a given time on.
 
     Parameters
     ----------
     connection: sqlalchemy.engine.Connection
         Connection to mysql db using sqlalchemy.
-    run_id: int
+    runID: int
         Identification number for a experiment.
     exp_id: int
-        The exp_id value for the MBR in the current run_id.
+        The exp_id value for the MBR in the current runID.
     from_time: int/float
         The time (in seconds) from which the setpoints want to be deleted.
     type_id: int
@@ -386,10 +391,10 @@ def delete_setpoints(connection, run_id, exp_id, from_time = 0, type_id = 99):
 
     """
     print(
-        f"Attention! This will delete the setpoint data for run {run_id} and bioreactor exp_id {exp_id} after experiment"
+        f"Attention! This will delete the setpoint data for run {runID} and bioreactor exp_id {exp_id} after experiment"
         f"time {from_time}s. Press enter to continue and q to quit.")
 
-    profiles = get_profile_ids(connection, run_id)
+    profiles = run2ids(connection, runID)
     profile_id = profiles.loc[profiles['experiment_id'] == exp_id]['profile_id'].iloc[0]
     query = f" DELETE FROM setpoints " \
             f" WHERE profile_id = {profile_id} AND variable_type_id = {type_id} AND cultivation_age > {from_time}; "
@@ -398,25 +403,25 @@ def delete_setpoints(connection, run_id, exp_id, from_time = 0, type_id = 99):
     connection.execute(sqlalchemy.text(query))
 
 
-def add_setpoints(connection, run_id, exp_id, setpoint_df, type_id = 99):
+def add_setpoints(connection, runID, exp_id, setpoint_df, type_id = 99):
     """
-    Adds setpoints to a given experiment (run_id) in a specific position (profile_name).
+    Adds setpoints to a given experiment (runID) in a specific position (profile_name).
 
     Parameters
     ----------
     connection: sqlalchemy.engine.Connection
         Connection to mysql db using sqlalchemy.
-    run_id: int
+    runID: int
         Identification number for a experiment.
     exp_id: int
-        The exp_id value for the MBR in the current run_id.
+        The exp_id value for the MBR in the current runID.
     setpoint_df: pandas.DataFrame
         A dataframe with two columns measurement_time and setpoint_value
     type_id: int
         Which setpoint want to be changed. In the database, this would be the 'variable_type_id' column.
 
     """
-    profiles = get_profile_ids(connection, run_id)
+    profiles = run2ids(connection, runID)
     profile_id = profiles.loc[profiles['experiment_id'] == exp_id]['profile_id'].iloc[0]
     setpoint_df.rename(columns={'measurement_time': 'cultivation_age'}, inplace=True)
     setpoint_df['profile_id'] = profile_id
@@ -427,9 +432,9 @@ def add_setpoints(connection, run_id, exp_id, setpoint_df, type_id = 99):
 
 
 
-def save_actions(run_id, file_path):
+def save_actions(runID, file_path):
     """
-    Main function to save all feeding profiles for MBRs for a run_id and a file containing the feeds.
+    Main function to save all feeding profiles for MBRs for a runID and a file containing the feeds.
     """
 
     with open(file_path, "r") as file:
@@ -444,8 +449,8 @@ def save_actions(run_id, file_path):
     with engine.connect() as connection:
         with connection.begin():
             for exp_id in setpoints_df:
-                delete_setpoints(connection, run_id, int(exp_id))
-                add_setpoints(connection, run_id, int(exp_id), setpoints_df[exp_id])
+                delete_setpoints(connection, runID, int(exp_id))
+                add_setpoints(connection, runID, int(exp_id), setpoints_df[exp_id])
 
 
 # **********************************************************************************
@@ -453,9 +458,9 @@ def save_actions(run_id, file_path):
 # **********************************************************************************
 
 
-def get_exp_ids (run_id, engine):
+def getIDs (run_id, engine):
     """
-    Get experiments IDs for a run_id
+    Get experiments IDs for a runID
     """
 
     sql_query = f"""
@@ -479,75 +484,20 @@ def deleteMeasurements (min_exp, max_exp, engine):
     engine.execute(sql_query)
 
 
-def delete_data(run_id):
+def delete_data(runID):
     """
-    Delete all the information for an specific run_id
+    Delete all the information for an specific runID
     """
-    min_exp, max_exp = get_exp_ids(run_id, engine)
+
+    if not runID in [623, 671, 672, 770]:
+        print(f"Emulator cannot run in the selected run id: {runID}")
+        sys.exit()
+
+    print("Deleting measurements for runID: "f'{runID}')
+   
+    min_exp, max_exp = getIDs(runID, engine)
+
+    print(min_exp, max_exp)
     deleteMeasurements(min_exp, max_exp, engine)
     
     # TODO: delete setpoints
-
-
-
-# **********************************************************************************
-#                CREATE new experiment tables for MULTI SIMULATION
-# **********************************************************************************
-
-def create_new_experiment_tables():
-
-    # create RUN
-    sql_query = f"""
-        INSERT INTO runs (run_id,run_name,folder_id,pms_id,status_id,start_time,end_time,description,conclusion,container_label,is_template) 
-        VALUES (NULL,'KIWI_dummydata_{uuid.uuid4}',103,2,2,NOW(),NULL,NULL,NULL,NULL,0);
-    """
-    res_run = engine.execute(sqlalchemy.text(sql_query))
-
-    # create BIOREACTOR
-    sql_query = f"""
-        INSERT INTO bioreactors (bioreactor_id,run_id,bioreactor_number,bioreactor_type_id,description) 
-        VALUES (NULL,{res_run.lastrowid},1,6,NULL);
-
-    """
-    res_bioreactor = engine.execute(sqlalchemy.text(sql_query))
-
-    # create PROFILES
-    position = ['A2', 'A3', 'A4', 'B2', 'B3', 'B4', 'C2', 'C3', 'C4', 'D2', 'D3', 'D4', 'E2', 'E3', 'E4', 'F2', 'F3', 'F4', 'G2', 'G3', 'G4', 'H2', 'H3', 'H4']
-    values = ",\n".join(
-        f"(NULL, '{position[i]}', NULL, 6, 58, 5, NULL, {res_run.lastrowid})" for i in range(24)
-    )
-
-    sql_query = f"""
-        INSERT INTO profiles (profile_id, profile_name, folder_id, organism_id, plasmid_id, medium_id, description, run_id)
-        VALUES {values};
-    """
-
-    res_profile = engine.execute(sqlalchemy.text(sql_query))
-
-    # create EXPERIMENTS
-    values = ",\n".join(
-        f"(NULL, {res_bioreactor.lastrowid}, 19, {res_profile.lastrowid + i}, NULL, NULL,'dummy',NULL)" for i in range(24)
-    )
-
-    sql_query = f"""
-        INSERT INTO experiments (experiment_id, bioreactor_id, container_number, profile_id, starter_culture_id, inactivation_method_id, description, color)
-        VALUES {values};
-    """
-
-    res_experiments = engine.execute(sqlalchemy.text(sql_query))
-    
-    # create MEASURING SETUP
-    variable_type = [(8, "OD600"), (18, "Glucose"), (28, "DOT"), (40, "Acetate"), (64, "Fluo_RFP")]
-    values = ",\n".join(
-        f"(NULL, {res_run.lastrowid}, 'e', {vt_id}, NULL, NULL)" for vt_id, _ in variable_type
-    )
-
-    sql_query = f"""
-        INSERT INTO measuring_setup (measuring_setup_id, run_id, `scope`, variable_type_id, device_id, analysis_method_id)
-        VALUES {values};
-     """
-
-    res_measuring_setup = engine.execute(sqlalchemy.text(sql_query))
-
-    return res_run.lastrowid, res_bioreactor.lastrowid, res_profile.lastrowid, res_experiments.lastrowid, res_measuring_setup.lastrowid
-

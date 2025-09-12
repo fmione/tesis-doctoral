@@ -205,8 +205,3 @@ class Model(StructuredNode):
     description = StringProperty(required=True)
     doi = StringProperty()
 
-
-
-
-
-                             

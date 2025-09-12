@@ -1,0 +1,173 @@
+experiment:
+  run_id: 623
+  horizon: 13 # end of the experiment since the start of the experiment
+  horizon_unit: "h"
+  time_btw_samplings: 0.33 # assuming same time for all reactors until end of experiment. The exact timestamp is in database.
+  time_btw_samplings_unit: "h"
+  delay_in_analytics: 1 # time of expected delay from sampling until data stored in database
+  delay_in_analytics_unit: "h"
+  ammonia: 3.5
+  ammonia_unit: "M"
+
+objective:
+  name: "Maximize biomass"
+  description: "Obtain the maximum biomass at the end of the experiment without exceeding the 20% constraint for DOT"
+
+responsible: 
+  -
+    name: "Lucas Kaspersetz"
+    rol: "laboratory_experimentation"
+  -
+    name: "Martin Luna"
+    rol: "computational_algorithms"
+  -
+    name: "Federico Mione"
+    rol: "workflow_definition"
+
+mbrs_groups:
+  strain1:
+    exp_ids: [19419,19420,19421,19422,19423,19424]
+    strain: "BL21(DE3)"
+    plasmid: "PET28-NMB2-mEFGFP-TEVrec-(V2y)15-His"
+    model:
+      name: "Anane2017"
+      parameter:
+        - 
+          name: "qs"
+          initial_value: [0.5, 0.5]
+    computational_method: 
+      estimation: 
+        package: "VBA"
+        computational_setup:
+          iterations: 1000
+          upper_bound: 1.5 # hyperparameter
+      optimization: 
+        package: "OPT"
+        computational_setup:
+          iterations: 500
+      prediction: 
+        package: "REG"
+
+  strain2: 
+    exp_ids: [19425,19426,19427,19428,19429,19430]
+    strain: "BL21(DE3)"
+    plasmid: "PET28-NMB2-mEFGFP-TEVrec-(V2y)15-His"
+    model:
+      name: "Anane2017"
+      parameter:
+        - 
+          name: "qs"
+          initial_value: [0.5, 0.5]
+    computational_method: 
+      estimation: 
+        package: "VBA"
+        computational_setup:
+          iterations: 1000
+          upper_bound: 1.5 # hyperparameter
+      optimization: 
+        package: "OPT"
+        computational_setup:
+          iterations: 500
+      prediction: 
+        package: "REG"
+
+  strain3: 
+    exp_ids: [19431,19432,19433,19434,19435,19436]
+    strain: "BL21(DE3)"
+    plasmid: "PET28-NMB2-mEFGFP-TEVrec-(V2y)15-His"
+    model:
+      name: "Anane2017"
+      parameter:
+        - 
+          name: "qs"
+          initial_value: [0.5, 0.5]
+    computational_method: 
+      estimation: 
+        package: "VBA"
+        computational_setup:
+          iterations: 1000
+          upper_bound: 1.5 # hyperparameter
+      optimization: 
+        package: "OPT"
+        computational_setup:
+          iterations: 500
+      prediction: 
+        package: "REG"
+
+  strain4: 
+    exp_ids: [19437,19438,19439,19440,19441,19442]
+    strain: "BL21(DE3)"
+    plasmid: "PET28-NMB2-mEFGFP-TEVrec-(V2y)15-His"
+    model:
+      name: "Anane2017"
+      parameter:
+        - 
+          name: "qs"
+          initial_value: [0.5, 0.5]
+    computational_method: 
+      estimation: 
+        package: "VBA"
+        computational_setup:
+          iterations: 1000
+          upper_bound: 1.5 # hyperparameter
+      optimization: 
+        package: "OPT"
+        computational_setup:
+          iterations: 500
+      prediction: 
+        package: "REG"
+
+feeding_config:
+  feeding_start: 5.1667 # 5 h 10 min start of the feeding phase since the start of the experiment
+  feeding_start_unit: "h"
+  feeding_stop: 13.167 # end of the feeding phase since the start of the experiment
+  feeding_stop_unit: "h"
+  feeding_frequency: 0.167 # (h) time between bolus feeds
+  feeding_frequency_unit: "h"
+  minimal_feed_volume: 5
+  minimal_feed_volume_unit: "µL"
+  maximal_feed_volume: 150 
+  maximal_feed_volume_unit: "µL"
+  increment_cumulative_feed_volume: 5 # difference between cumulative pulse
+  increment_feed_volume_unit: "µL"
+  glc_feed_concentration: 200.0
+  glc_feed_concentration_unit: "g/L"
+  exponential_lower_bound : 14 # cumulative pulse in µL
+  exponential_upper_bound : 58 # cumulative pulse in µL
+  bounds_unit: "µL"
+
+induction_config:
+  induction_start: 10.167 # inducer addition since the start of the experiment
+  induction_start_unit: "h"
+  induction: 0.5
+  induction_unit: "mM"
+  induction_stock_solution : 500
+  induction_stock_solution_unit : "mM"
+
+computational_workflow_definition:
+  iterations: 15
+  time_bw_samples: 60
+  time_first_sample: 72
+  time_to_process_sample: 60
+  time_bw_check_db: 10
+  time_start_checking_db: 60
+  time_units: "m"
+
+mbrs_config:
+  stirring_speed: 2600
+  stirring_speed_unit: "rpm"
+  aeration: 5.0
+  aeration_type: "Air"
+  aeration_unit: "nL/min"
+
+computational_method:
+  -
+    name: "Variational Bayesian Analysis Toolbox"
+    language: "Matlab"
+    package: "VBA"
+    url: "https://mbb-team.github.io/VBA-toolbox/"
+  -
+    name: "Mu_set reference"
+    language: "None"
+    package: "Reference"
+    url: "None"

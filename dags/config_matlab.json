@@ -1,0 +1,47 @@
+{
+    "host_path": "\"C:/Users/Fede/Documents/Airflow/property-graph-schema/dags\"",
+    "emulator_runid": 623,
+    "matlab_dag_definition": {
+        "iterations": 15,
+        "time_bw_samples": 60,
+        "time_first_sample": 60,
+        "time_to_process_sample": 66,
+        "time_bw_check_db": 10,
+        "time_start_checking_db": 60,
+        "runID": 623,
+        "experiment_ids": {
+            "strain1": [
+                19419,
+                19420,
+                19427,
+                19428,
+                19435,
+                19436
+            ],
+            "strain2": [
+                19421,
+                19422,
+                19429,
+                19430,
+                19437,
+                19438
+            ],
+            "strain3": [
+                19423,
+                19424,
+                19431,
+                19432,
+                19439,
+                19440
+            ],
+            "strain4": [
+                19425,
+                19426,
+                19433,
+                19434,
+                19441,
+                19442
+            ]
+        }
+    }
+}

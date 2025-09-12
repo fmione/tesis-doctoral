@@ -1,7 +1,7 @@
 **/__pycache__/*
 .idea/
 logs/
-plugins/
+/plugins/
 neo4j/
 **/.DS_Store
 .vscode
@@ -9,6 +9,9 @@ dags/data/
 dags/results/
 **/VBA_*.json
 **/db_output.json
-**/EMULATOR_*.json
-**/db_emulator*.json
 images/matlab/*
+dags/scripts/lib/emulator2/db_emulator_streamlit.json
+dags/scripts/lib/emulator2/db_emulator_dot.json
+dags/scripts/lib/emulator2/db_emulator.json
+dags/scripts/lib/emulator2/EMULATOR_state.json
+dags/scripts/lib/emulator2/EMULATOR_design.json

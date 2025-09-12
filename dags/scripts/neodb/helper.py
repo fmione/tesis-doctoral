@@ -169,8 +169,8 @@ class NeomodelHelper:
             pass
 
         if "save_preprocess" in context["ti"].task_id:
-            # self.add_setpoints(context, workflow_node, metadata)
-            pass
+            self.add_setpoints(context, workflow_node, metadata)
+            # pass
 
         if "predict" in context["ti"].task_id:
             # self.add_state_prediction(context, workflow_node, metadata)

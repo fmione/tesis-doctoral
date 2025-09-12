@@ -1583,6 +1583,9 @@ INSERT INTO ilabdb.folders (folder_id,folder_name,parent_id,group_id,description
 	 (124,'FoodLabs',NULL,1,NULL),
 	 (125,'Runs',124,NULL,NULL);
 
+INSERT INTO ilabdb.runs (run_id,run_name,folder_id,pms_id,status_id,start_time,end_time,description,conclusion,container_label,is_template) VALUES
+	 (623,'20220909_KIWI_dummydata',103,2,2,'2023-03-28 17:10:00',NULL,NULL,NULL,NULL,0);
+
 INSERT INTO ilabdb.bioreactor_types (bioreactor_type_id,bioreactor_type_name,number_of_rows,number_of_columns,capacity_per_container,description) VALUES
 	 (1,'MTP (96 Wells)',8,12,0.200000,NULL),
 	 (2,'MTP (48 Wells)',8,6,0.500000,NULL),
@@ -1592,6 +1595,9 @@ INSERT INTO ilabdb.bioreactor_types (bioreactor_type_id,bioreactor_type_name,num
 	 (7,'PreSens SFR 500 mL Sensor Flasks',3,3,100.000000,'Sensorkolben: 500 mL Gesmatvolumen, 100 mL Arbeitsvolumen'),
 	 (8,'PreSens Vario 500 mL',1,2,500.000000,NULL),
 	 (9,'HELPolyblock 8x',4,2,150.000000,NULL);
+
+INSERT INTO ilabdb.bioreactors (bioreactor_id,run_id,bioreactor_number,bioreactor_type_id,description) VALUES
+	 (734,623,1,6,NULL);
 
 INSERT INTO ilabdb.organisms (organism_id,organism_name,description) VALUES
 	 (1,'Escherichia coli RB 791',NULL),
@@ -1781,6 +1787,62 @@ INSERT INTO ilabdb.media (medium_id,medium_name,description) VALUES
 	 (21,'Milk',NULL),
 	 (22,'FM7','Specific MSM with Biospringer yeast extract');
 
+INSERT INTO ilabdb.profiles (profile_id,profile_name,folder_id,organism_id,plasmid_id,medium_id,description,run_id) VALUES
+	 (13763,'A2',NULL,6,58,5,NULL,623),
+	 (13764,'B2',NULL,6,58,5,NULL,623),
+	 (13765,'C2',NULL,6,58,5,NULL,623),
+	 (13766,'D2',NULL,6,58,5,NULL,623),
+	 (13767,'E2',NULL,6,58,5,NULL,623),
+	 (13768,'F2',NULL,6,58,5,NULL,623),
+	 (13769,'G2',NULL,6,58,5,NULL,623),
+	 (13770,'H2',NULL,6,58,5,NULL,623),
+	 (13771,'A3',NULL,6,58,5,NULL,623),
+	 (13772,'B3',NULL,6,58,5,NULL,623);
+INSERT INTO ilabdb.profiles (profile_id,profile_name,folder_id,organism_id,plasmid_id,medium_id,description,run_id) VALUES
+	 (13773,'C3',NULL,6,58,5,NULL,623),
+	 (13774,'D3',NULL,6,58,5,NULL,623),
+	 (13775,'E3',NULL,6,58,5,NULL,623),
+	 (13776,'F3',NULL,6,58,5,NULL,623),
+	 (13777,'G3',NULL,6,58,5,NULL,623),
+	 (13778,'H3',NULL,6,58,5,NULL,623),
+	 (13779,'A4',NULL,6,58,5,NULL,623),
+	 (13780,'B4',NULL,6,58,5,NULL,623),
+	 (13781,'C4',NULL,6,58,5,NULL,623),
+	 (13782,'D4',NULL,6,58,5,NULL,623);
+INSERT INTO ilabdb.profiles (profile_id,profile_name,folder_id,organism_id,plasmid_id,medium_id,description,run_id) VALUES
+	 (13783,'E4',NULL,6,58,5,NULL,623),
+	 (13784,'F4',NULL,6,58,5,NULL,623),
+	 (13785,'G4',NULL,6,58,5,NULL,623),
+	 (13786,'H4',NULL,6,58,5,NULL,623);
+
+INSERT INTO ilabdb.experiments (experiment_id,bioreactor_id,container_number,profile_id,starter_culture_id,inactivation_method_id,description,color) VALUES
+	 (19419,734,9,13763,NULL,NULL,'dummy','#FF1F9EDE'),
+	 (19420,734,10,13764,NULL,NULL,'dummy','#FFFF6D06'),
+	 (19421,734,11,13765,NULL,NULL,'dummy',NULL),
+	 (19422,734,12,13766,NULL,NULL,'dummy',NULL),
+	 (19423,734,13,13767,NULL,NULL,'dummy',NULL),
+	 (19424,734,14,13768,NULL,NULL,'dummy',NULL),
+	 (19425,734,15,13769,NULL,NULL,'dummy',NULL),
+	 (19426,734,16,13770,NULL,NULL,'dummy',NULL),
+	 (19427,734,17,13771,NULL,NULL,'dummy','#FF1F9EDE'),
+	 (19428,734,18,13772,NULL,NULL,'dummy','#FFFF6D06');
+INSERT INTO ilabdb.experiments (experiment_id,bioreactor_id,container_number,profile_id,starter_culture_id,inactivation_method_id,description,color) VALUES
+	 (19429,734,19,13773,NULL,NULL,'dummy',NULL),
+	 (19430,734,20,13774,NULL,NULL,'dummy',NULL),
+	 (19431,734,21,13775,NULL,NULL,'dummy',NULL),
+	 (19432,734,22,13776,NULL,NULL,'dummy',NULL),
+	 (19433,734,23,13777,NULL,NULL,'dummy',NULL),
+	 (19434,734,24,13778,NULL,NULL,'dummy',NULL),
+	 (19435,734,25,13779,NULL,NULL,'dummy','#FF1F9EDE'),
+	 (19436,734,26,13780,NULL,NULL,'dummy','#FFFF6D06'),
+	 (19437,734,27,13781,NULL,NULL,'dummy',NULL),
+	 (19438,734,28,13782,NULL,NULL,'dummy',NULL);
+INSERT INTO ilabdb.experiments (experiment_id,bioreactor_id,container_number,profile_id,starter_culture_id,inactivation_method_id,description,color) VALUES
+	 (19439,734,29,13783,NULL,NULL,'dummy',NULL),
+	 (19440,734,30,13784,NULL,NULL,'dummy',NULL),
+	 (19441,734,31,13785,NULL,NULL,'dummy',NULL),
+	 (19442,734,32,13786,NULL,NULL,'dummy',NULL);
+
 INSERT INTO ilabdb.variable_types (variable_type_id,canonical_name,display_name,unit,lower_limit,upper_limit) VALUES
 	 (1,'Temperature','Temperature','°C',NULL,NULL),
 	 (2,'pH','pH','-',5.500000000000,8.000000000000),
@@ -1926,3 +1988,40 @@ INSERT INTO ilabdb.variable_types (variable_type_id,canonical_name,display_name,
 	 (145,'nanobody_total','nanobody_total','g/L',0.000000000000,NULL);
 INSERT INTO ilabdb.variable_types (variable_type_id,canonical_name,display_name,unit,lower_limit,upper_limit) VALUES
 	 (146,'nanobody_extracellular','nanobody_extracellular','g/L',0.000000000000,NULL);
+
+INSERT INTO ilabdb.measuring_setup (measuring_setup_id,run_id,`scope`,variable_type_id,device_id,analysis_method_id) VALUES
+	 (5920,623,'b',1,NULL,NULL),
+	 (5921,623,'b',5,NULL,NULL),
+	 (5923,623,'b',75,NULL,NULL),
+	 (5924,623,'b',76,NULL,NULL),
+	 (5925,623,'b',77,NULL,NULL),
+	 (5926,623,'e',2,NULL,NULL),
+	 (5935,623,'e',8,NULL,NULL),
+	 (5936,623,'e',18,NULL,NULL),
+	 (5929,623,'e',26,NULL,NULL),
+	 (5930,623,'e',27,NULL,NULL);
+INSERT INTO ilabdb.measuring_setup (measuring_setup_id,run_id,`scope`,variable_type_id,device_id,analysis_method_id) VALUES
+	 (5922,623,'e',28,NULL,NULL),
+	 (5940,623,'e',34,NULL,NULL),
+	 (5941,623,'e',36,NULL,NULL),
+	 (5937,623,'e',40,NULL,NULL),
+	 (5934,623,'e',63,NULL,NULL),
+	 (5945,623,'e',64,NULL,NULL),
+	 (5944,623,'e',65,NULL,NULL),
+	 (5947,623,'e',66,NULL,NULL),
+	 (5946,623,'e',67,NULL,NULL),
+	 (5942,623,'e',69,NULL,NULL);
+INSERT INTO ilabdb.measuring_setup (measuring_setup_id,run_id,`scope`,variable_type_id,device_id,analysis_method_id) VALUES
+	 (5939,623,'e',78,NULL,NULL),
+	 (5931,623,'e',83,NULL,NULL),
+	 (5932,623,'e',84,NULL,NULL),
+	 (5933,623,'e',93,NULL,NULL),
+	 (5928,623,'e',103,NULL,NULL),
+	 (5927,623,'e',104,NULL,NULL),
+	 (5938,623,'e',106,NULL,NULL),
+	 (5943,623,'e',111,NULL,NULL),
+	 (6362,623,'e',122,NULL,NULL),
+	 (6361,623,'e',130,NULL,NULL);
+INSERT INTO ilabdb.measuring_setup (measuring_setup_id,run_id,`scope`,variable_type_id,device_id,analysis_method_id) VALUES
+	 (6371,623,'e',132,NULL,NULL),
+	 (6370,623,'e',133,NULL,NULL);
