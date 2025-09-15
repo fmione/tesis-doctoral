@@ -497,7 +497,6 @@ def delete_data(runID):
    
     min_exp, max_exp = getIDs(runID, engine)
 
-    print(min_exp, max_exp)
     deleteMeasurements(min_exp, max_exp, engine)
     
     # TODO: delete setpoints

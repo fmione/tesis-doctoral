@@ -63,37 +63,102 @@ with DAG(
     clean_db >> start_emu >> save_start_time
     last_node = save_start_time
 
-    # iterations every hour to group tasks
-    for hours in range(int(t_duration)):
+# -----------------------------  one shot  ---------------------------------
+    if acceleration == 54000:
 
-        with TaskGroup(group_id=f"{hours + 1}_hour{'s' if hours+1 > 1 else ''}_tasks"):
+        run_emu = base_docker_node(
+            task_id=f"run_emu",
+            command=["python", "-c", "from Node_run_emulator import run_emu; run_emu()"],
+        )
+
+        save_measurements = base_docker_node(
+            task_id=f"save_measurements",
+            command=["python", "-c", "from database_connector import save_measurements; save_measurements()"],
+        )
+
+        get_measurements = base_docker_node(
+            task_id=f"get_measurements",
+            command=["python", "-c", "from database_connector import query_and_save; query_and_save(623, 'db_output.json')"],
+        )
+
+        last_node >> run_emu >> save_measurements >> get_measurements
+
+
+    # ----------------------------- iterations ---------------------------------
+    else:
+    
+        # iterations every hour to group tasks
+        for hours in range(int(t_duration)):
+
+            with TaskGroup(group_id=f"{hours + 1}_hour{'s' if hours+1 > 1 else ''}_tasks"):
+
+                #  iter_minutes[] / acceleration = real time wait
+                if acceleration in [1, 2, 4]:
+                    iter_minutes = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]
+
+                if acceleration == 60:
+                    iter_minutes = [60]
+
+                for minutes in iter_minutes:
+
+                    time = (hours * 60 + minutes) / acceleration
+
+                    wait = TimeDeltaSensor(
+                        task_id=f"wait_{time}_min", 
+                        poke_interval=10, trigger_rule='all_done', 
+                        delta=dt.timedelta(minutes=time)
+                    )
+
+                    get_feeds = base_docker_node(
+                        task_id=f"get_feeds_{hours * 60 + minutes}_min",
+                        command=["python", "-c", "from database_connector import get_feeds; get_feeds(623)"],
+                    )
+
+                    run_emu = base_docker_node(
+                        task_id=f"run_emu_{hours * 60 + minutes}_min",
+                        command=["python", "-c", "from Node_run_emulator import run_emu; run_emu()"],
+                    )
+
+                    save_db_emu = base_docker_node(
+                        task_id=f"save_db_{hours * 60 + minutes}_min",
+                        command=["python", "-c", "from database_connector import save_measurements; save_measurements()"],
+                    )
+
+                    last_node >> wait >> get_feeds >> run_emu >> save_db_emu
+                    last_node = save_db_emu
+
+
+    # # iterations every hour to group tasks
+    # for hours in range(int(t_duration)):
+
+    #     with TaskGroup(group_id=f"{hours + 1}_hour{'s' if hours+1 > 1 else ''}_tasks"):
         
-            # iteration every 5 minutes (65 to include the last bound) or 1 iteration of 1 minute if acceleration is 60
-            for minutes in range(5, 65, 5) if acceleration == 1 else [1]:
+    #         # iteration every 5 minutes (65 to include the last bound) or 1 iteration of 1 minute if acceleration is 60
+    #         for minutes in range(5, 65, 5) if acceleration == 1 else [1]:
 
-                time = int(hours * 60 / acceleration) + minutes
+    #             time = int(hours * 60 / acceleration) + minutes
 
-                wait = TimeDeltaSensor(
-                    task_id=f"wait_{time}_min", 
-                    poke_interval=30, trigger_rule='all_done', 
-                    delta=dt.timedelta(minutes=time)
-                )
+    #             wait = TimeDeltaSensor(
+    #                 task_id=f"wait_{time}_min", 
+    #                 poke_interval=30, trigger_rule='all_done', 
+    #                 delta=dt.timedelta(minutes=time)
+    #             )
 
-                get_feeds = base_docker_node(
-                    task_id=f"get_feeds_{time}",
-                    command=["python", "-c", "from database_connector import get_feeds; get_feeds()"],
-                )
+    #             get_feeds = base_docker_node(
+    #                 task_id=f"get_feeds_{time}",
+    #                 command=["python", "-c", "from database_connector import get_feeds; get_feeds()"],
+    #             )
 
-                run_emu = base_docker_node(
-                    task_id=f"run_emu_{time}",
-                    command=["python", "-c", "from Node_run_emulator import run_emu; run_emu()"],
-                )
+    #             run_emu = base_docker_node(
+    #                 task_id=f"run_emu_{time}",
+    #                 command=["python", "-c", "from Node_run_emulator import run_emu; run_emu()"],
+    #             )
 
-                save_db_emu = base_docker_node(
-                    task_id=f"save_db_{time}",
-                    command=["python", "-c", "from database_connector import save_measurements; save_measurements()"],
-                )
+    #             save_db_emu = base_docker_node(
+    #                 task_id=f"save_db_{time}",
+    #                 command=["python", "-c", "from database_connector import save_measurements; save_measurements()"],
+    #             )
 
-                last_node >> wait >> get_feeds >> run_emu >> save_db_emu
-                last_node = save_db_emu
+    #             last_node >> wait >> get_feeds >> run_emu >> save_db_emu
+    #             last_node = save_db_emu
     

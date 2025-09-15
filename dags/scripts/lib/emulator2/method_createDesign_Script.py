@@ -8,13 +8,13 @@ import time
 t_duration=16.1
 
 
-species_list=['Xv','Glucose','Acetate','DOT','Fluo_RFP','Volume'] #Model species used in the model
+species_list=['Xv', 'Glucose', 'Acetate', 'DOT', 'Fluo_RFP', 'Volume'] #Model species used in the model
 
-species_IC=[0.18,3,0,100,150,.01] #Initial states for the species listed above
-glucose_IC=[4,4,3,3,3,3,3,3]*3 #Initial states for the species listed above
+species_IC=[0.18, 4, 0, 100, 150, .01] #Initial states for the species listed above
+glucose_IC=[3, 3, 3.5, 3.5, 4, 4, 4.5, 4.5] * 3 #Initial states for the species listed above
 
 
-time_pulses=np.arange(4+5/60,t_duration,10/60) #Time in hours
+time_pulses=np.arange(4 + 5/60, t_duration, 10/60) #Time in hours
 time_samples_columns={'col1':np.arange(.33,t_duration,1).tolist()+[t_duration],'col2':np.arange(.66,t_duration,1).tolist()+[t_duration],'col3':np.arange(.99,t_duration,1).tolist()+[t_duration]} #Time in hours
 sampling_rate_DOT=2/60 #Time in hours
 
@@ -29,7 +29,7 @@ Inductor_conc=[1]*len(mbr_list) # 0 to 1 for now
 
 time_execution=[]#np.arange(0,t_duration+1,1).tolist()# # leave empty for Real Time, otherwise use time in hours
 
-acceleration=60# =1 for real time, otherwise it multiplies time by this factor
+acceleration=54000# =1 for real time, otherwise it multiplies time by this factor
 
 # %% Create config
 EMULATOR_config={}

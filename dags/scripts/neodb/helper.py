@@ -98,23 +98,48 @@ class NeomodelHelper:
 
         with db.transaction:
             for exp_id in db_output:
-                # get br instance
-                br = Bioreactor.nodes.get_or_none(exp_id=int(exp_id))
 
-                # iterates and creates measurements
-                if br:
-                    for measurement_type, measurement_values in db_output[exp_id]["measurements_aggregated"].items():
-                        # avoid units
-                        if measurement_type in MEASUREMENT_TYPES:
-                            for index, m_time in measurement_values["measurement_time"].items():                            
-                                # checks if measurement already exists for that br
-                                match_measurement, _ = db.cypher_query("MATCH (br:Bioreactor)<-[]-(m:Measurement) WHERE br.exp_id=$exp_id AND m.type=$measurement_type AND m.time=$time return m",
-                                                                dict(exp_id=int(exp_id), measurement_type=measurement_type, time=m_time), resolve_objects=True)
-                                # if not exists, creates it
-                                if len(match_measurement) == 0:
-                                    measurement = Measurement(type=measurement_type, time=m_time, time_unit=TIME_UNITS["s"], value=measurement_values[measurement_type][index], value_unit="").save()
-                                    measurement.bioreactor.connect(br)
-                                    workflow_node.measurement.connect(measurement)
+                existing, _ = db.cypher_query(
+                    """
+                    MATCH (br:Bioreactor {exp_id:$exp_id})<-[]-(m:Measurement)
+                    RETURN m.type as type, m.time as time
+                    """,
+                    dict(exp_id=int(exp_id))
+                )
+                existing_set = {(row[0], row[1]) for row in existing}
+
+                for measurement_type, measurement_values in db_output[exp_id]["measurements_aggregated"].items():
+                    if measurement_type not in MEASUREMENT_TYPES:
+                        continue
+
+                    batch = []
+                    for index, m_time in measurement_values["measurement_time"].items():
+                        if (measurement_type, m_time) not in existing_set:
+                            print(f"Adding measurement: BR {exp_id}, Type: {measurement_type}, Time: {m_time}")
+                            batch.append({
+                                "type": measurement_type,
+                                "time": m_time,
+                                "value": measurement_values[measurement_type][index]
+                            })
+
+                    if batch:
+                        db.cypher_query(
+                            """
+                            UNWIND $batch as row
+                            MATCH (br:Bioreactor {exp_id:$exp_id})
+                            CREATE (m:Measurement {type:row.type, time:row.time, time_unit:$time_unit, value:row.value, value_unit:''})
+                            CREATE (m)-[:SAMPLE_FROM]->(br)
+                            WITH m
+                            MATCH (wf:WorkflowNode {task_id:$workflow_task_id})
+                            CREATE (wf)-[:GETS]->(m)
+                            """,
+                            dict(
+                                exp_id=int(exp_id),
+                                batch=batch,
+                                time_unit=TIME_UNITS["s"],
+                                workflow_task_id=context["ti"].task_id,
+                            )
+                        )
 
         print("--------- End measurement ---------")
 
@@ -125,6 +150,7 @@ class NeomodelHelper:
         metadata = self.get_metadata()
         # create WorkflowNode
         wfn = WorkflowNode(task_id=context["ti"].task_id, trigger_rule=context["task"].trigger_rule, init_time=context["task"].start_date, status=WORKFLOW_NODE_STATUS["running"]).save()
+        
         # create relation with all the predecessor WorkflowNodes (dependencies)
         print(context["task"].upstream_task_ids)
         for task_dep_id in context["task"].upstream_task_ids:
@@ -165,26 +191,23 @@ class NeomodelHelper:
         workflow_node = self.update_workflow_node_status(context)
 
         if "parameter" in context["ti"].task_id:
-            # self.add_parameters(context, workflow_node, metadata)
-            pass
+            self.add_parameters(context, workflow_node, metadata)
+            # pass
 
         if "save_preprocess" in context["ti"].task_id:
             self.add_setpoints(context, workflow_node, metadata)
             # pass
 
         if "predict" in context["ti"].task_id:
-            # self.add_state_prediction(context, workflow_node, metadata)
-            pass
+            self.add_state_prediction(context, workflow_node, metadata)
+            # pass
 
 
     # callbacks for online redesign nodes (600 secs interval)
     @db.transaction
     def add_setpoints(self, context, workflow_node, metadata): 
         # get group from taskID
-        for group in metadata["mbrs_groups"]:
-            if group in context["ti"].task_id:
-                current_group = group
-                break
+        current_group = next((g for g in metadata["mbrs_groups"] if g in context["ti"].task_id), None)
 
         # get iteration number
         try:
@@ -195,40 +218,53 @@ class NeomodelHelper:
         # get data        
         with open(f"{os.getcwd()}/dags/results/{metadata['experiment']['run_id']}/feed/{current_group}/feed_{iter}.json", 'r') as file:
             feeds_file = json.load(file)
-            file.close()
 
-        # get bioreactor
-        for exp_id in feeds_file:
-            br_node = Bioreactor.nodes.get_or_none(exp_id=int(exp_id))
-                    
-            # create nodes
-            for _, row in pd.DataFrame(feeds_file[exp_id]).iterrows():
-                feed_node = FeedingSetpoint(
-                    time=row["measurement_time"], time_unit=TIME_UNITS["s"], 
-                    value=row["setpoint_value"], value_unit="µL").save()
-    
-                # asociate nodes with current task in the workflow, and with the BR
-                feed_node.bioreactor.connect(br_node)
-                workflow_node.feeding_setpoint.connect(feed_node)
+        feed_records = []
+        for exp_id, rows in feeds_file.items():
+            feed_records.append({
+                "exp_id": int(exp_id),
+                "time": rows["measurement_time"],
+                "value": rows["setpoint_value"]
+            })
+
+        db.cypher_query(
+            """
+            UNWIND $feeds AS feed
+            MATCH (br:Bioreactor {exp_id:feed.exp_id})
+            MATCH (wf:WorkflowNode {task_id:$workflow_task_id})
+            CREATE (fs:FeedingSetpoint {
+                time:feed.time,
+                time_unit:$time_unit,
+                value:feed.value,
+                value_unit:'µL'
+            })
+            CREATE (fs)-[:FEEDS]->(br)
+            CREATE (wf)-[:CALCULATES]->(fs)
+            """,
+            {
+                "feeds": feed_records,
+                "workflow_task_id": context["ti"].task_id,
+                "time_unit": TIME_UNITS["s"]
+            }
+        )
 
         # add computational_method
-        comp_method_node = ComputationalMethod.get_or_create({"name": "Setpoint"})
-        workflow_node.computational_method.connect(comp_method_node[0])
+        comp_method_node = ComputationalMethod.get_or_create({"name": "Setpoint"})[0]
+        workflow_node.computational_method.connect(comp_method_node)
 
         # add computational_environment
         comp_env_node = ComputationalEnvironment(cpu="Intel i5 4570", ram="16mb", operating_system="WSL").save()
         workflow_node.computational_environment.connect(comp_env_node)
 
+
         print("--------- End feeding ---------")
+
 
     # callback for PE 
     @db.transaction
     def add_parameters(self, context, workflow_node, metadata):
         # get group from taskID
-        for group in metadata["mbrs_groups"]:
-            if group in context["ti"].task_id:
-                current_group = group
-                break
+        current_group = next((g for g in metadata["mbrs_groups"] if g in context["ti"].task_id), None)
 
         # get iteration number
         try:
@@ -247,7 +283,6 @@ class NeomodelHelper:
         # get data
         with open(f"{os.getcwd()}/dags/scripts/matlab/{current_group}/VBA_log.json", 'r') as file:
             param_file = json.load(file)
-            file.close()
 
         # get model
         model_node = Model.get_or_create({"name": "Anane2017", "description": "None"})[0]
@@ -273,24 +308,54 @@ class NeomodelHelper:
             # asociate with model
             parameter_node.model.connect(model_node)
 
+
+        param_records = [
+            {
+                "name": p,
+                "unit": u,
+                "mean": float(real_param[i]),
+                "variance": float(std_real_param[i])
+            }
+            for i, (p, u) in enumerate(zip(param_list, param_units))
+        ]
+
+        db.cypher_query(
+            """
+            UNWIND $params AS p
+            MATCH (wf:WorkflowNode {task_id:$workflow_task_id})
+            MATCH (m:Model {name:$model_name})
+            CREATE (mp:ModelParameter {
+                name:p.name,
+                unit:p.unit,
+                mean:p.mean,
+                variance:p.variance
+            })
+            CREATE (wf)-[:ESTIMATES]->(mp)
+            CREATE (mp)-[:PART_OF]->(m)
+            """,
+            {
+                "params": param_records,
+                "workflow_task_id": context["ti"].task_id,
+                "model_name": "Anane2017"
+            }
+        )
+
         # TODO: add computational_method
-        comp_method_node = ComputationalMethod.get_or_create({"name": "Parameter"})
-        workflow_node.computational_method.connect(comp_method_node[0])
+        comp_method_node = ComputationalMethod.get_or_create({"name": "Parameter"})[0]
+        workflow_node.computational_method.connect(comp_method_node)
 
         # TODO: add computational_environment
         comp_env_node = ComputationalEnvironment(cpu="Intel i5 4570", ram="16mb", operating_system="WSL").save()
         workflow_node.computational_environment.connect(comp_env_node)
 
         print("--------- End param ---------")
+
     
     # callback for model state predictions 
     @db.transaction
     def add_state_prediction(self, context, workflow_node, metadata):
         # get group from taskID
-        for group in metadata["mbrs_groups"]:
-            if group in context["ti"].task_id:
-                current_group = group
-                break
+        current_group = next((g for g in metadata["mbrs_groups"] if g in context["ti"].task_id), None)
 
         # get iteration number
         try:
@@ -307,31 +372,47 @@ class NeomodelHelper:
         # get data
         with open(f"{os.getcwd()}/dags/scripts/matlab/{current_group}/VBA_digitalTwin.json", 'r') as file:
             dtwin_file = json.load(file)
-            file.close()
 
-        # get bioreactor
+        state_records = []
         for br_index, exp_id in enumerate(metadata["mbrs_groups"][current_group]["exp_ids"], start=1):
-            br_node = Bioreactor.nodes.get_or_none(exp_id=int(exp_id))
-            if not br_node:
-                continue
+            for m_index, measurement in species_list.items():
+                # state_row [time, value]
+                for time_val, value in dtwin_file[f"iter{iter}"]["x_prediction"][f"n{br_index}"][m_index]:
+                    state_records.append({
+                        "exp_id": int(exp_id),
+                        "type": measurement,
+                        "time": time_val,
+                        "value": value
+                    })
 
-            # iterate species
-            for m_index, measurement in species_list.items():                
-                for state_row in dtwin_file[f"iter{iter}"]["x_prediction"][f"n{br_index}"][m_index]:
-                    state_node = ModelState(
-                        type=measurement, time=state_row[0], time_unit=TIME_UNITS['h'],
-                        value=state_row[1], value_unit="-").save()
-    
-                    # asociate nodes with current task in the workflow, and with the BR
-                    state_node.bioreactor.connect(br_node)
-                    workflow_node.model_state.connect(state_node)
-
-                    # asociate with model
-                    state_node.model.connect(model_node)
+        db.cypher_query(
+            """
+            UNWIND $states AS st
+            MATCH (br:Bioreactor {exp_id:st.exp_id})
+            MATCH (wf:WorkflowNode {task_id:$workflow_task_id})
+            MATCH (m:Model {name:$model_name})
+            CREATE (ms:ModelState {
+                type:st.type,
+                time:st.time,
+                time_unit:$time_unit,
+                value:st.value,
+                value_unit:'-'
+            })
+            CREATE (br)<-[:PREDICTION_FOR]-(ms)
+            CREATE (wf)-[:PREDICTS]->(ms)
+            CREATE (ms)-[:PART_OF]->(m)
+            """,
+            {
+                "states": state_records,
+                "workflow_task_id": context["ti"].task_id,
+                "model_name": "Anane2017",
+                "time_unit": TIME_UNITS['h']
+            }
+        )
 
         # add computational_method
-        comp_method_node = ComputationalMethod.get_or_create({"name": "Prediction"})
-        workflow_node.computational_method.connect(comp_method_node[0])
+        comp_method_node = ComputationalMethod.get_or_create({"name": "Prediction"})[0]
+        workflow_node.computational_method.connect(comp_method_node)
 
         # add computational_environment
         comp_env_node = ComputationalEnvironment(cpu="Intel i5 4570", ram="16mb", operating_system="WSL").save()
