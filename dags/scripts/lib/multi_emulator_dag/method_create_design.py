@@ -8,7 +8,7 @@ def create_design(exp_ids, t_duration, acceleration):
 
     species_list=['Xv','Glucose','Acetate','DOT','Fluo_RFP','Volume'] #Model species used in the model
 
-    species_IC=[0.18,3,0,100,150,.01] #Initial states for the species listed above
+    species_IC=[0.18,4,0,100,150,.01] #Initial states for the species listed above
     glucose_IC=[4,4,4,4,4,4,4,4]*3 #Initial states for the species listed above
 
 
@@ -23,13 +23,22 @@ def create_design(exp_ids, t_duration, acceleration):
 
     mbr_list=exp_ids #names of the bioreactors
 
-    mu_set=np.linspace(0.12,0.30,len(mbr_list))
+    mu_set=np.linspace(0.08, 0.31, len(mbr_list))
 
     Glucose_feed=[200]*len(mbr_list) # in g/l
     Induction_time=[10]*len(mbr_list) #Time in hours
     Inductor_conc=[1]*len(mbr_list) # 0 to 1 for now
 
-    Params=[1.578, 0.43041, 0.6439,  2.2048,  0.1563,  0.1143,  0.1848,    287.74,    0.2586, 1.5874,  0.3322,  0.0371,  0.0818,  7.0767,  0.4242, 1.057]+[750]*len(mbr_list)+[90]*len(mbr_list)
+    # Params=[1.578, 0.43041, 0.6439,  2.2048,  0.1563,  0.1143,  0.1848,    287.74,    0.2586, 1.5874,  0.3322,  0.0371,  0.0818,  7.0767,  0.4242, 1.057]+[750]*len(mbr_list)+[90]*len(mbr_list)
+
+    # Params_ref=np.array([1.2578, 0.43041, 0.6439,  2.2048*0+7.0767,  0.4063,  0.1143*4,  0.1848*4, 287.74*0+.4242, 1.586*.7, 1.5874*.7,  0.3322*.75,  0.0371,  0.0818, 9000, .1, 5])#+[850]+[90])
+    
+    Params_ref=np.array([1.578, 0.43041, 0.6439,  2.2048,  0.1563,  0.1143,  0.1848,    287.74,    0.2586, 1.5874,  0.3322,  0.0371,  0.0818,  7.0767,  0.4242, 1.057])
+    
+    Params={}
+    Params_ref_row=(Params_ref*(1+0.66*(np.random.random(len(Params_ref))-.5)/2)).tolist()
+    Params=Params_ref_row + [750 * (1+0.66*(np.random.random()-.5)/2)] * len(mbr_list) + [90 * (1+0.66*(np.random.random()-.5)/2)] * len(mbr_list)
+
 
     time_execution=[]#np.arange(0,t_duration+1,1).tolist()# # leave empty for Real Time, otherwise use time in hours
 

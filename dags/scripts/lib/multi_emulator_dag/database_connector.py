@@ -21,6 +21,7 @@ def get_connection_url():
 local_tz = pytz.timezone('Europe/Amsterdam')
 
 db = get_connection_url()
+# db = 'mysql+mysqlconnector://dbuser:dbpassword123@localhost:3306/ilabdb'
 engine = sqlalchemy.create_engine(db, echo=False)
 
 
@@ -325,21 +326,19 @@ def read_run(run_id):
     return json_data
 
 
+
 def query_and_save(run_id, filepath):
     """
     Get all the information from a run_id
     """
 
-    rootdir = os.getcwd()
-
     db_json = read_run(run_id)
 
-
     # save JSON file for historical monitoring
-    if not os.path.isdir(os.path.dirname(f"{rootdir}/{filepath}")):
-        os.makedirs(os.path.dirname(f"{rootdir}/{filepath}"))
+    if not os.path.isdir(os.path.dirname(f"{filepath}")):
+        os.makedirs(os.path.dirname(f"{filepath}"))
 
-    pd.DataFrame(db_json).to_json(f"{rootdir}/{filepath}")
+    pd.DataFrame(db_json).to_json(f"{filepath}")
 
 
 # **********************************************************************************

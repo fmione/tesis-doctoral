@@ -13,6 +13,6 @@ for run_id in range(1, 401):
 
 plt.xlabel('Time [h]')
 plt.ylabel('DOT [%]')
-plt.legend()
+# plt.legend()
 plt.grid(True)
 plt.show()
