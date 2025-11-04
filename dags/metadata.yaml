@@ -32,6 +32,9 @@ mbrs_groups:
         name: "Variational Bayesian Analysis Toolbox"
         model:
           name: "Anane2017"
+        script_file_path: "dags/scripts/matlab/Node_param.m"
+        input_file_path: "dags/scripts/matlab/group1/VBA_config.json"
+        output_file_path: "dags/scripts/matlab/group1/VBA_log.json"
      
   group2: 
     exp_ids: [19421,19422,19429,19430,19437,19438]
@@ -42,6 +45,9 @@ mbrs_groups:
         name: "Variational Bayesian Analysis Toolbox"
         model:
           name: "Anane2017"
+        script_file_path: "dags/scripts/matlab/Node_param.m"
+        input_file_path: "dags/scripts/matlab/group2/VBA_config.json"
+        output_file_path: "dags/scripts/matlab/group2/VBA_log.json"
 
   group3: 
     exp_ids: [19423,19424,19431,19432,19439,19440]
@@ -52,14 +58,23 @@ mbrs_groups:
         name: "Variational Bayesian Analysis Toolbox"
         model:
           name: "Anane2017"
+        script_file_path: "dags/scripts/matlab/Node_param.m"
+        input_file_path: "dags/scripts/matlab/group3/VBA_config.json"
+        output_file_path: "dags/scripts/matlab/group3/VBA_log.json"
 
   group4: 
     exp_ids: [19425,19426,19433,19434,19441,19442]
     strain: "BL21(DE3)"
     plasmid: "PET28-NMB2-mEFGFP-TEVrec-(V2y)15-His"
     computational_method: 
-      optimization: 
-        name: "Mu_set reference"
+      estimation: 
+        name: "Variational Bayesian Analysis Toolbox"
+        model:
+          name: "Anane2017"
+        script_file_path: "dags/scripts/matlab/Node_param.m"
+        input_file_path: "dags/scripts/matlab/group4/VBA_config.json"
+        output_file_path: "dags/scripts/matlab/group4/VBA_log.json"
+
 
 feeding_config:
   feeding_start: 5.1667
@@ -110,11 +125,6 @@ computational_method:
     language: "Matlab"
     package: "VBA"
     url: "https://mbb-team.github.io/VBA-toolbox/"
-  -
-    name: "Mu_set reference"
-    language: "None"
-    package: "Reference"
-    url: "None"
 
 model:
   -

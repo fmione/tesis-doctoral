@@ -17,7 +17,7 @@ CREATE GRAPH TYPE HTBDComputationalWorkflowGraphType STRICT {
 
     (plasmidType: Plasmid {name STRING, OPTIONAL supplier STRING, OPTIONAL acquisition_date DATE}),
         
-    (workflowNodeType: WorkflowNode {task_id STRING, trigger_rule ENUM("all_success", "one_success", "all_failed", "one_failed", "none_failed", "all_done", "all_skipped", "none_skipped"), status ENUM("Success", "Failed", "Running", "Skipped"), init_time DATE, OPTIONAL end_time DATE}),
+    (workflowNodeType: WorkflowNode {task_id STRING, trigger_rule ENUM("all_success", "one_success", "all_failed", "one_failed", "none_failed", "all_done", "all_skipped", "none_skipped"), status ENUM("Success", "Failed", "Running", "Skipped"), init_time DATE, OPTIONAL end_time DATE, OPTIONAL input_file_path STRING, OPTIONAL output_file_path STRING, OPTIONAL script_file_path STRING, OPEN}),
 
     (computationalMethodType: ComputationalMethod {name STRING, OPTIONAL package STRING, OPTIONAL language STRING, OPTIONAL url STRING, OPEN}),
 
@@ -55,7 +55,7 @@ CREATE GRAPH TYPE HTBDComputationalWorkflowGraphType STRICT {
     (:inductionConfigType)
 
     (:experimentType)
-        -[includesType: Includes]->
+        -[includesType: Includes {OPEN}]->
     (:bioreactorType)
 
     (:bioreactorType)

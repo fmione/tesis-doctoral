@@ -13,7 +13,7 @@ with DAG(
         is_paused_upon_creation=True
 ) as dag:
 
-    # path to strain definition
+    # path to strain (group) definition
     strains = config["experiment_ids"].keys()
 
     # set results folder
