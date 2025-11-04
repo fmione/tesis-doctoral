@@ -23,45 +23,43 @@ responsible:
     rol: "workflow_definition"
 
 mbrs_groups:
-  strain1:
-    exp_ids: [19419,19420,19421,19422,19423,19424]
+  group1:
+    exp_ids: [19419,19420,19427,19428,19435,19436]
     strain: "BL21(DE3)"
     plasmid: "PET28-NMB2-mEFGFP-TEVrec-(V2y)15-His"
     computational_method: 
       estimation: 
-        package: "VBA"
+        name: "Variational Bayesian Analysis Toolbox"
         model:
           name: "Anane2017"
      
-  strain2: 
-    exp_ids: [19425,19426,19427,19428,19429,19430]
+  group2: 
+    exp_ids: [19421,19422,19429,19430,19437,19438]
     strain: "BL21(DE3)"
     plasmid: "PET28-NMB2-mEFGFP-TEVrec-(V2y)15-His"
     computational_method: 
       estimation: 
-        package: "VBA"
+        name: "Variational Bayesian Analysis Toolbox"
         model:
           name: "Anane2017"
 
-  strain3: 
-    exp_ids: [19431,19432,19433,19434,19435,19436]
+  group3: 
+    exp_ids: [19423,19424,19431,19432,19439,19440]
     strain: "BL21(DE3)"
     plasmid: "PET28-NMB2-mEFGFP-TEVrec-(V2y)15-His"
     computational_method: 
       estimation: 
-        package: "VBA"
+        name: "Variational Bayesian Analysis Toolbox"
         model:
           name: "Anane2017"
 
-  strain4: 
-    exp_ids: [19437,19438,19439,19440,19441,19442]
+  group4: 
+    exp_ids: [19425,19426,19433,19434,19441,19442]
     strain: "BL21(DE3)"
     plasmid: "PET28-NMB2-mEFGFP-TEVrec-(V2y)15-His"
     computational_method: 
-      estimation: 
-        package: "VBA"
-        model:
-          name: "Anane2017"
+      optimization: 
+        name: "Mu_set reference"
 
 feeding_config:
   feeding_start: 5.1667
