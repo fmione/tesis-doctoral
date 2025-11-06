@@ -13,8 +13,8 @@ with DAG(
         is_paused_upon_creation=True
 ) as dag:
 
-    # path to strain (group) definition
-    strains = config["experiment_ids"].keys()
+    # path to group definition
+    groups = config["experiment_ids"].keys()
 
     # set results folder
     results_path = f"../results/{config['runID']}"
@@ -23,16 +23,16 @@ with DAG(
     start = init_workflow()
     last_node = start
 
-    # for each strain (matlab replica) create initial files, execute offline design and save initial profile feed in DB
-    for strain in strains:
-        with TaskGroup(group_id=f"init_{strain}_0"):
+    # for each group (matlab replica) create initial files, execute offline design and save initial profile feed in DB
+    for group in groups:
+        with TaskGroup(group_id=f"init_{group}_0"):
 
-            init = matlab_execution(f"init", "Node_0", strain_path=strain)
-            offline_design = matlab_execution(f"offline_design", "Node_optimizer", strain_path=strain)
-            save_preprocess_0 = save_preprocess_data(config["experiment_ids"][strain], f"matlab/{strain}/VBA_feed.json", 
-                                                            f"{results_path}/feed/{strain}/feed_0.json")
-            save_db_0 = save_db(config["runID"], config["experiment_ids"][strain], f"{results_path}/feed/{strain}/feed_0.json")
-            model_predict_0 = matlab_execution(f"model_predict", "Node_predict", timeout=20, trigger_rule="all_success", strain_path=strain)
+            init = matlab_execution(f"init", "Node_0", group_path=group)
+            offline_design = matlab_execution(f"offline_design", "Node_optimizer", group_path=group)
+            save_preprocess_0 = save_preprocess_data(config["experiment_ids"][group], f"matlab/{group}/VBA_feed.json", 
+                                                            f"{results_path}/feed/{group}/feed_0.json")
+            save_db_0 = save_db(config["runID"], config["experiment_ids"][group], f"{results_path}/feed/{group}/feed_0.json")
+            model_predict_0 = matlab_execution(f"model_predict", "Node_predict", timeout=20, trigger_rule="all_success", group_path=group)
             
             # first dependencies before loop
             start >> init >> offline_design >> save_preprocess_0 >> save_db_0
@@ -59,25 +59,25 @@ with DAG(
         # last iteration only query db
         if it != config["iterations"]:
             
-            # for each strain (matlab replica) add a taskgroup workflow
-            for strain in strains:
+            # for each group (matlab replica) add a taskgroup workflow
+            for group in groups:
                
-                with TaskGroup(group_id=f"workflow_{strain}_{it}"):
-                    # preprocess the subset of exp_ids for the specific strain
-                    load_preprocess = sample_preprocess(config["experiment_ids"][strain], f"{results_path}/db/db_output_{it}.json", 
-                                                        f"matlab/{strain}/db_output.json")
+                with TaskGroup(group_id=f"workflow_{group}_{it}"):
+                    # preprocess the subset of exp_ids for the specific group
+                    load_preprocess = sample_preprocess(config["experiment_ids"][group], f"{results_path}/db/db_output_{it}.json", 
+                                                        f"matlab/{group}/db_output.json")
 
                     # trigger computational methods
-                    update_iteration = matlab_execution(f"update_iteration", "Node_beginIter", timeout=5, strain_path=strain)
-                    parameter_estimation = matlab_execution(f"parameter_reestimation", "Node_param", timeout=30, strain_path=strain)
-                    online_redesign = matlab_execution(f"online_redesign", "Node_optimizer", timeout=20, trigger_rule="one_success", strain_path=strain)
-                    fix_pe = matlab_execution(f"fix_pe", "Node_crash", timeout=10, trigger_rule="one_failed", strain_path=strain)
-                    model_predict = matlab_execution(f"model_predict", "Node_predict", timeout=10, trigger_rule="all_success", strain_path=strain)
+                    update_iteration = matlab_execution(f"update_iteration", "Node_beginIter", timeout=5, group_path=group)
+                    parameter_estimation = matlab_execution(f"parameter_reestimation", "Node_param", timeout=30, group_path=group)
+                    online_redesign = matlab_execution(f"online_redesign", "Node_optimizer", timeout=20, trigger_rule="one_success", group_path=group)
+                    fix_pe = matlab_execution(f"fix_pe", "Node_crash", timeout=10, trigger_rule="one_failed", group_path=group)
+                    model_predict = matlab_execution(f"model_predict", "Node_predict", timeout=10, trigger_rule="all_success", group_path=group)
                     
                     # preprocess and save actions in ilab db
-                    save_preprocess = save_preprocess_data(config["experiment_ids"][strain], f"matlab/{strain}/VBA_feed.json", 
-                                                            f"{results_path}/feed/{strain}/feed_{it}.json")
-                    save_actions_db = save_db(config["runID"], config["experiment_ids"][strain], f"{results_path}/feed/{strain}/feed_{it}.json")
+                    save_preprocess = save_preprocess_data(config["experiment_ids"][group], f"matlab/{group}/VBA_feed.json", 
+                                                            f"{results_path}/feed/{group}/feed_{it}.json")
+                    save_actions_db = save_db(config["runID"], config["experiment_ids"][group], f"{results_path}/feed/{group}/feed_{it}.json")
 
                     # set dependencies
                     get_measurements >> load_preprocess >> update_iteration >> parameter_estimation >> fix_pe

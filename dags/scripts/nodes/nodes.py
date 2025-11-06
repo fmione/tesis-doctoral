@@ -36,14 +36,14 @@ def matlab_retry_callback(context):
         context["ti"].set_state("failed")
 
 
-def matlab_execution(task_id, file_name, timeout=20, trigger_rule='all_done', strain_path=""):
+def matlab_execution(task_id, file_name, timeout=20, trigger_rule='all_done', group_path=""):
     return MatlabOperator(
         task_id=task_id,
         image="federm20/matlab-vba:v1.0.0",
         auto_remove="force",
         working_dir=f"{matlab_path}/scripts/matlab",
         user="root",
-        command=f'sudo matlab -batch "strain=\'{strain_path}\'; run(\'{file_name}\')"',
+        command=f'sudo matlab -batch "strain=\'{group_path}\'; run(\'{file_name}\')"',
         environment=os.environ,
         mounts=[Mount(source=host_path, target=matlab_path, type='bind'),
                 Mount(source=os.path.dirname(host_path)+"/images/matlab/", target=os.environ.get("MATLAB_LICENSE_PATH"), type='bind')],
