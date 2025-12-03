@@ -1,98 +1,73 @@
-# Experiment simulation with Apache Airflow&#174; and Neo4j DB
+# Tesis Doctoral - Ing. Federico Mione
 
-Complete documentation and code to reproduce the results of the paper entitled: **"A property graph schema for automated metadata capture, reproducibility and knowledge discovery in high-throughput bioprocess development"**.
+Código y documentación completa para reproducir los resultados y las conclusiones de la tesis doctoral denominada **"Un enfoque basado en grafos de conocimiento y grafos acíclicos dirigidos para la automatización y la reproducibilidad de flujos de trabajo computacionales en plataformas robóticas de experimentación intensiva"**.
 
-## Authors
-Federico M. Mione $^a$, Martin F. Luna $^a$, Lucas Kaspersetz $^b$, Peter Neubauer $^b$, Ernesto C. Martinez $^a$ and M. Nicolas Cruz Bournazou $^b$.
 
-*$^a$ INGAR (CONICET - UTN). Avellaneda 3657, Santa Fe, Argentina*<br>
-*$^b$ Technische Universität Berlin, Institute of Biotechnology, Chair of Bioprocess
+*Tesista*: Federico M. Mione $^a$ <br>
+*Director*: Ernesto C. Martínez $^{a,b}$ <br>
+*Co-Director*: M. Nicolas Cruz Bournazou $^b$ <br>
+
+$^a$ *INGAR (CONICET - UTN). Avellaneda 3657, Santa Fe, Argentina*<br>
+$^b$ *Technische Universität Berlin, Institute of Biotechnology, Chair of Bioprocess
 Engineering. Berlin, Germany*
 
-## Overview
+## Resumen
 
-The context of this work involves the use of Apache Airflow as a Workflow Management System to handle the execution of the necessary tasks to achieve a specific goal in the experimentation, creating the computational environments required for each step through the instantiation of Docker containers. As shown in the following image, the interaction with robotic devices is carried out through the relational database associated with the devices.
+El objetivo central de esta tesis es demostrar que la reproducibilidad, inicialmente en su dimensión computacional relacionada al control de la experimentación, es alcanzable mediante el diseño de una infraestructura que combine la captura automatizada de datos y metadatos por medio de un orquestador de tareas, junto con un modelo de datos para almacenar el conocimiento de forma estructurada. Bajo esta premisa, se propuso y validó una arquitectura que integra Apache Airflow para la orquestación, Neo4j como base de datos orientada a grafos y PG-Schema como modelo formal para la representación de entidades y relaciones enriquecidas semánticamente.
 
-The contribution of this work addresses the formalization of a common schema or vocabulary for the experimentation and its control component, associated with the computational workflow implemented in parallel and directly integrated into the Neo4j database, specifically an LPG. Connected with this graph database, a web interface is implemented to allow different users to access the knowledge stored, to monitor the experimentation online or query historical data, among its main functionalities.
 
-<img src="docs/source/figures/Overview.png" width=100% style="max-width: 600px !important">
+## Vista de componentes
 
-## Reproducibility
+<img src="docs/figures/Overview.png" width=100% style="max-width: 600px !important">
 
-### MATLAB License
+## Reproducibilidad - Caso de estudio 1
 
-You must have a valid Matlab license to reproduce the example. The license must be configured for **version R2022a**, specifying the user as **root** and the MAC address as **02:42:ac:11:ff:12** to ensure the Docker container works correctly.
+Esta rama del repositorio se encuentra dedicada al Caso de estudio 1. Para acceder al Caso de estudio 2, dirigirse a la rama *case2*.
 
-This license file must be named `license.lic` and placed in the `images/matlab/` directory.
+### Licencia MATLAB
 
-### Steps
+Se debe generar una licencia MATLAB válida para reproducir este caso. La misma se debe configurar con la versión **R2022a**, especificando el usuario **root** y la dirección MAC **02:42:ac:11:ff:12** para asegurar su funcionamiento en el contenedor Docker.
 
-Keep in mind that the simulation of the experiment is done in real time, therefore, it takes 16 hours.
+El archivo resultante se debe nombrar `license.lic` y se debe ubicar en la carpeta `images/matlab/`.
 
-To reproduce the results, please follow these steps:
+### Listado de pasos
 
-* Install [Git](https://git-scm.com/) and [Docker](https://www.docker.com/).
+Recordar que la simulación de este caso se ejecuta en tiempo real, por lo tanto, la duración será de 16 horas
 
-* Clone the repository and get the corresponding branch:
+Para reproducir los resultados, siga los siguientes pasos:
+
+* Instalar [Git](https://git-scm.com/) y [Docker](https://www.docker.com/).
+
+* Clonar el repositorio:
 
         git clone https://git.tu-berlin.de/bvt-htbd/public/property-graph-schema
 
-* Navigate to the directory created (*property-graph-schema*) and set up the Airflow service:
+* Navegar al directorio creado (*tesis-doctoral-case1*) y desplegar el servicio inicial de Airflow con el siguiente comando:
 
         docker-compose up -d airflow-init 
 
-* Next, install all the remaining services:
+* Luego, instalar los servicios restantes:
 
         docker-compose up -d
 
-* Please wait until the installation completes (this may take a couple of minutes), after which you should be able to access the Apache Airflow interface at http://localhost:8080/.
-**Log in with user: airflow, and password: airflow.**
+* Por favor, esperar hasta que la instalación finalice (puede demorar algunos minutos). Posteriormente, acceder a la plataforma Airflow mediante su interfaz web en la dirección http://localhost:8080/.
+**Iniciar sesión con el usuario: airflow, y la contraseña: airflow.**
 
-* Finally, Airflow variables should be set:
+* Finalmente, se deben configurar algunas variables de Airflow:
 
-    * In the upper ribbon, navigate to **Admin** > **Variables**.
-    * Click on **choose a file**, and locate the *config_matlab.json* file within the *dags* directory.
-    * Once the JSON file is uploaded, click on **Import variables**.
+    * En el panel seleccionar **Admin** > **Variables**.
+    * Hacer click en **choose a file**, y seleccionar el archivo *config_matlab.json* ubicado en el directorio *dags*.
+    * Una vez que el archivo JSON se ha cargado, presionar el botón **Import variables**.
     
-    **IMPORTANT**: The **variable host_path must be changed** to the actual absolute local path where the */dags* folder is located.
+    **IMPORTANTE**: La **variable host_path debe ser cambiada** por la ruta absoluta disponible de forma local donde se ubica la carpeta */dags*.
 
 
-## Run DAGs
-Two DAGs are defined: one for the emulator (*Emulator_DAG*) and the other for computational control (*Matlab_DAG*). To execute both, the corresponding toggle buttons must be activated, followed by pressing the play button for each DAG.
+## Ejecución de DAGs
+Existen dos DAGs: uno para el emulador (*Emulator_DAG*) y el restante para el control computacional (*Matlab_DAG*). Para ejecutar ambos, se debe activar el boton (*toggle*) correspondiente al DAG y luego presionar el botón play.
 
-IMPORTANT: To run the local emulator (with the ilab database in Docker), ensure that the "emulator_runid" variable is set to 623. Each time the emulator is executed, all experimental data associated with this RUN ID (623) is deleted to start a new simulation.
+## Herramienta de monitoreo
+Para visualizar la simulación (ya sea online u offline), se puede acceder a una herramienta con ploteos en la ruta: http://localhost:8501/. Aquí se debe seleccionar el RUN ID perteneciente al experimento, en este caso, el 623.
 
-## Monitoring tool
-To monitor the simulated experiments (both online and offline), a tool can be accessed at the following address: http://localhost:8501/
+## Licencia
+Este proyecto se encuentra bajo una Licencia MIT. Visualzar el archivo [LICENSE](./LICENSE) para más detalles.
 
-Please, select the simulated experiment with RUN ID 623.
-
-## PG-Schema
-
-Using the work of [PG-Schema](https://dl.acm.org/doi/abs/10.1145/3589778) and its predecesor [PG-Keys](https://dl.acm.org/doi/10.1145/3448016.3457561), you can locate our schema definition in [schema.pgs](/dags/schema/schema.pgs) file.
-
-## Neomodel implementation
-
-An instance of the proposed schema is implemented using [Neomodel](https://neomodel.readthedocs.io/) library. The development process consists of three steps, model definition, calbacks implementation, and nodes integration:
-
-* The complete model definition can be found in the [model.py](dags/scripts/neodb/model.py) file.
-* The implementation of the class to define all the available callbacks can be found in the [helper.py](dags/scripts/neodb/helper.py) file.
-* The instantiation of the callbacks is included in the definition of each [Airflow node](dags/scripts/nodes/nodes.py).
-
-## Web interface
-
-A detailed description of the web interface is available in the [web](/web/) folder.
-
-To access the platform, please navigate to http://localhost:5000/ and create a new user to log in.
-
-## Neo4j Queries
-
-Neo4j query results and other examples are shown in the [queries](/queries/) folder.
-
-## Acknowledgements
-
-We gratefully acknowledge the financial support of the German Federal Ministry of Education and Research (01DD20002A – KIWI biolab).
-
-## License
-
-This project is under an MIT license. See the [LICENSE](./LICENSE) file for more details.
