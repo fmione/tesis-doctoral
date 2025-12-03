@@ -1,55 +1,69 @@
-# Comparison between MySQL and Neo4j Database
+# Tesis Doctoral - Ing. Federico Mione
 
-Complete documentation and code to reproduce the results presented in the Supplementary Material of the paper entitled: **"A property graph schema for automated metadata capture, reproducibility and knowledge discovery in high-throughput bioprocess development"**.
+Código y documentación completa para reproducir los resultados y las conclusiones de la tesis doctoral denominada **"Un enfoque basado en grafos de conocimiento y grafos acíclicos dirigidos para la automatización y la reproducibilidad de flujos de trabajo computacionales en plataformas robóticas de experimentación intensiva"**.
 
-## Authors
-Federico M. Mione $^a$, Martin F. Luna $^a$, Lucas Kaspersetz $^b$, Peter Neubauer $^b$, Ernesto C. Martinez $^a$ and M. Nicolas Cruz Bournazou $^b$.
 
-*$^a$ INGAR (CONICET - UTN). Avellaneda 3657, Santa Fe, Argentina*<br>
-*$^b$ Technische Universität Berlin, Institute of Biotechnology, Chair of Bioprocess
+*Tesista*: Federico M. Mione $^a$ <br>
+*Director*: Ernesto C. Martínez $^{a,b}$ <br>
+*Co-Director*: M. Nicolas Cruz Bournazou $^b$ <br>
+
+$^a$ *INGAR (CONICET - UTN). Avellaneda 3657, Santa Fe, Argentina*<br>
+$^b$ *Technische Universität Berlin, Institute of Biotechnology, Chair of Bioprocess
 Engineering. Berlin, Germany*
 
+## Resumen
 
-## Reproducibility
+El objetivo central de esta tesis es demostrar que la reproducibilidad, inicialmente en su dimensión computacional relacionada al control de la experimentación, es alcanzable mediante el diseño de una infraestructura que combine la captura automatizada de datos y metadatos por medio de un orquestador de tareas, junto con un modelo de datos para almacenar el conocimiento de forma estructurada. Bajo esta premisa, se propuso y validó una arquitectura que integra Apache Airflow para la orquestación, Neo4j como base de datos orientada a grafos y PG-Schema como modelo formal para la representación de entidades y relaciones enriquecidas semánticamente.
 
-Keep in mind that the simulation of the experiment is accelerated (1 minute of simulation = 1 hour of experimentation).
 
-To reproduce the results, please follow these steps:
+## Vista de componentes
 
-* Install [Git](https://git-scm.com/) and [Docker](https://www.docker.com/).
+<img src="docs/figures/Overview.png" width=100% style="max-width: 600px !important">
 
-* Clone the repository and get the corresponding branch:
+## Reproducibilidad - Caso de estudio 2
 
-        git clone https://git.tu-berlin.de/bvt-htbd/public/property-graph-schema
-        git checkout multi_exp
+Esta rama del repositorio se encuentra dedicada al Caso de estudio 2. Para acceder al Caso de estudio 1, dirigirse a la rama *case1*.
 
-* Navigate to the directory created (*property-graph-schema*) and set up the Airflow service:
+### Listado de pasos
 
+Al tratarse de 400 simulaciones experimentales, la duración de la ejecución para este caso de estudio será de aproximadamente 5 horas.
+
+Para reproducir los resultados, siga los siguientes pasos:
+
+* Instalar [Git](https://git-scm.com/) y [Docker](https://www.docker.com/).
+
+* Clonar el repositorio y ubicarse en la rama correspondiente al caso de estudio 2:
+
+        git clone https://github.com/fmione/tesis-doctoral
+        git checkout case2
+
+* Navegar al directorio creado (*tesis-doctoral*) y desplegar el servicio inicial de Airflow con el siguiente comando:
+
+        cd tesis-doctoral
         docker-compose up -d airflow-init 
 
-* Next, install all the remaining services:
+* Luego, instalar los servicios restantes:
 
         docker-compose up -d
 
-* Please wait until the installation completes (this may take a couple of minutes), after which you should be able to access the Apache Airflow interface at http://localhost:8080/.
-**Log in with user: airflow, and password: airflow.**
+* Por favor, esperar hasta que la instalación finalice (puede demorar algunos minutos). Posteriormente, acceder a la plataforma Airflow mediante su interfaz web en la dirección http://localhost:8080/.
+**Iniciar sesión con el usuario: airflow, y la contraseña: airflow.**
 
-* Finally, Airflow variables should be set:
+* Finalmente, se deben configurar algunas variables de Airflow:
 
-    * In the upper ribbon, navigate to **Admin** > **Variables**.
-    * Click on **choose a file**, and locate the *variables.json* file within the *dags* directory.
-    * Once the JSON file is uploaded, click on **Import variables**.
+    * En el panel seleccionar **Admin** > **Variables**.
+    * Hacer click en **choose a file**, y seleccionar el archivo *variables.json* ubicado en el directorio *dags*.
+    * Una vez que el archivo JSON se ha cargado, presionar el botón **Import variables**.
     
-    **IMPORTANT**: The **variable host_path must be changed** to the actual absolute local path where the */dags* folder is located.
+    **IMPORTANTE**: La **variable host_path debe ser cambiada** por la ruta absoluta disponible de forma local donde se ubica la carpeta */dags*.
 
 
-## Run DAG
-To execute the simulation (*Multi_Emulator_DAG*), the corresponding toggle button must be activated, followed by pressing the play button for the DAG.
+## Ejecución de DAGs
+Existen un único DAG para la simulación: *MultiEmulator_2.0_DAG*. Para ejecutarlo, se debe activar el boton (*toggle*) correspondiente al DAG y luego presionar el botón play.
 
-## Acknowledgements
+## Herramienta de monitoreo
+Para visualizar la simulación (ya sea online u offline), se puede acceder a una herramienta con ploteos en la ruta: http://localhost:8501/. Aquí se debe seleccionar el RUN ID perteneciente al experimento a visualizar, en este caso, alguno del rango 1-400.
 
-We gratefully acknowledge the financial support of the German Federal Ministry of Education and Research (01DD20002A – KIWI biolab).
+## Licencia
+Este proyecto se encuentra bajo una Licencia MIT. Visualzar el archivo [LICENSE](./LICENSE) para más detalles.
 
-## License
-
-This project is under an MIT license. See the [LICENSE](./LICENSE) file for more details.
