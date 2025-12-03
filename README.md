@@ -40,7 +40,7 @@ Para reproducir los resultados, siga los siguientes pasos:
 
 * Clonar el repositorio:
 
-        git clone https://git.tu-berlin.de/bvt-htbd/public/property-graph-schema
+        git clone https://github.com/fmione/tesis-doctoral
 
 * Navegar al directorio creado (*tesis-doctoral-case1*) y desplegar el servicio inicial de Airflow con el siguiente comando:
 
