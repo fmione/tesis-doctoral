@@ -42,8 +42,9 @@ Para reproducir los resultados, siga los siguientes pasos:
 
         git clone https://github.com/fmione/tesis-doctoral
 
-* Navegar al directorio creado (*tesis-doctoral-case1*) y desplegar el servicio inicial de Airflow con el siguiente comando:
+* Navegar al directorio creado (*tesis-doctoral*) y desplegar el servicio inicial de Airflow con el siguiente comando:
 
+        cd tesis-doctoral
         docker-compose up -d airflow-init 
 
 * Luego, instalar los servicios restantes:
