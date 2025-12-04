@@ -60,8 +60,8 @@ def decide_next(**kwargs):
     count += 1
     Variable.set("exp_counter", str(count))
 
-    ti = kwargs['ti']
-    ti.xcom_push(key='run_number', value=count)
+    # ti = kwargs['ti']
+    # ti.xcom_push(key='run_number', value=count)
 
     if count < number_of_experiments:
         return "trigger_self"
@@ -159,7 +159,7 @@ with DAG(
         task_id='trigger_self',
         trigger_dag_id='MultiEmulator_2.0_DAG',
         wait_for_completion=False,
-        trigger_run_id="{{ 'auto_run_' ~ task_instance.xcom_pull(task_ids='check_trigger', key='run_number') }}"
+        trigger_run_id="{{ 'auto_run_' ~ task_instance.xcom_pull(task_ids='init') }}"
     )
 
     end = EmptyOperator(task_id="end_task")
